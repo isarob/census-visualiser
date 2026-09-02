@@ -455,6 +455,8 @@ def load_cached_datasets(
         "(this could take a while)"
     )
 
+    '''
+    comment out the loading and uncomment this if you've loaded osm data before and are changing the census cache
     pois = gpd.read_parquet(
             pois_cache
             )
@@ -501,7 +503,6 @@ def load_cached_datasets(
 
     #put tags in poi["tags"] into main tags
     pois = expand_osm_tags(pois)
-    '''
 
     # --------------------------------------------------------------
     # Save cache
@@ -1768,7 +1769,7 @@ if __name__ == "__main__":
 
     sa1_divisions, suburbs, sed, services = (
         load_cached_datasets(
-            force_reload=True
+            force_reload=False
         )
     )
 
