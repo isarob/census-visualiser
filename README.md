@@ -2,7 +2,7 @@
 This is a program to generate mapping data on an electorate wide basis.
 
 
-Setup.
+##Setup.
 
 
 You need the following data in the same directory as census.py:
@@ -55,5 +55,56 @@ Hypothetically this program will work with other states' data although I haven't
 Once you have all the data in the folder run census.py. It will take quite a long time to load in all the data (~5mins on my machine)
 
 
-In order to not have to process all this data every time the program runs it creates a cache in /cache. You can toggle generation of the cache by changing the force_reload flag to true in load_cached_datasets (it's called at the top of __main__)
+###python3 census.py
+
+
+In order to not have to process all this data every time the program runs it creates a cache in /cache. You can toggle generation of the cache by using arguments:
+
+###python3 census.py all
+
+Reloads census and open streetmap cache. Useful when updating all datasets
+
+### python3 census.py census
+
+Only reloads census cache. Useful when making changes to which census tables you are working with.
+
+
+##Functions
+
+###calculate_extra_columns
+
+Adds extra variables to sa1 data such as Percentages, Feasability etc. If you want to calculate new variables this is the place to do it. Adds them to all maps, summaries etc.
+
+###electorate_summary
+
+Creates a summary of a total electorate and prints it to the command line.
+
+note: This function adds up all sa1 divisions. Where the variable is a median (eg median income), it takes the mean of all the medians, and is probably not statistically useful
+
+###generate_heatmap
+
+Creates a heatmap of an electoral division for some census variable.
+
+###generate_html_map
+
+Creates an interactable html map of one or more electoral divisions
+
+
+
+##Data
+
+
+
+
+Auburn electorate:
+
+2016 public housing households: 1626
+2016 total housholds: 29348
+2016 public housing percent: 5.5%
+
+2021 public housing households: 1569
+2021 total housholds: 32198
+2021 public housing percent: 4.9%
+
+Assuming public housing has continued to decrease at the same rate, it is now only 4.2% of housing stock in Auburn
 

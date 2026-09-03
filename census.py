@@ -9,6 +9,7 @@ import folium
 import pandas as pd
 import geopandas as gpd
 import os
+import sys
 
 DATA_DIR = Path(__file__).resolve().parent
 CACHE_DIR = DATA_DIR / "cache"
@@ -16,7 +17,7 @@ SA1_YEAR=2021
 
 def load_cached_datasets(
     data_dir=DATA_DIR,
-    force_reload=False,
+    force_reload="none",
     gcp_tables=None
 ):
     CACHE_DIR.mkdir(
@@ -34,7 +35,7 @@ def load_cached_datasets(
     # --------------------------------------------------------------
 
     if (
-        not force_reload
+        force_reload == "none"
         and sa1_cache.exists()
         and suburbs_cache.exists()
         and sed_cache.exists()
@@ -455,54 +456,53 @@ def load_cached_datasets(
         "(this could take a while)"
     )
 
-    '''
-    comment out the loading and uncomment this if you've loaded osm data before and are changing the census cache
-    pois = gpd.read_parquet(
-            pois_cache
-            )
-    '''
-    osm = OSM(
-        "new-south-wales-latest.osm.pbf"
-    )
+    if(force_reload == "census"):
+        pois = gpd.read_parquet(
+                pois_cache
+                )
+    else:
+        osm = OSM(
+            "new-south-wales-latest.osm.pbf"
+        )
 
-    pois = osm.get_pois(
-        custom_filter = {
-            "amenity": [
-                "hospital",
-                "clinic",
-                "doctors",
-                "school",
-                "childcare",
-                "kindergarten",
-                "community_centre",
-                "library",
-                "place_of_worship",
-            ],
+        pois = osm.get_pois(
+            custom_filter = {
+                "amenity": [
+                    "hospital",
+                    "clinic",
+                    "doctors",
+                    "school",
+                    "childcare",
+                    "kindergarten",
+                    "community_centre",
+                    "library",
+                    "place_of_worship",
+                ],
 
-            "healthcare": [
-                "hospital",
-                "clinic",
-                "doctor",
-                "physiotherapist",
-                "rehabilitation",
-                "centre",
-            ],
+                "healthcare": [
+                    "hospital",
+                    "clinic",
+                    "doctor",
+                    "physiotherapist",
+                    "rehabilitation",
+                    "centre",
+                ],
 
-            "shop": [
-                "mall",
-            ],
+                "shop": [
+                    "mall",
+                ],
 
-            "leisure": [
-                "sports_centre",
-                "stadium",
-            ],
+                "leisure": [
+                    "sports_centre",
+                    "stadium",
+                ],
 
-            "social_facility": True,
-        }
-    )
+                "social_facility": True,
+            }
+        )
 
-    #put tags in poi["tags"] into main tags
-    pois = expand_osm_tags(pois)
+        #put tags in poi["tags"] into main tags
+        pois = expand_osm_tags(pois)
 
     # --------------------------------------------------------------
     # Save cache
@@ -936,77 +936,13 @@ def electorate_summary(
 
     electorate_mesh = electorate_mesh.copy()
 
-    # make some columns numeric
-    cols = [
-        "G40_Tot_Tot",
-        "G41_Total_Total",
-        "G41_Flt_apart_Tot_Total",
-        "G41_Separate_house_Total",
-        "G46B_P_Tot_Emp_Tot",
-        "G46B_P_Tot_LF_Tot"
-    ]
-
-    for col in cols:
-        if col in electorate_mesh.columns:
-            electorate_mesh[col] = pd.to_numeric(
-                electorate_mesh[col],
-                errors="coerce"
-            )
+    electorate_mesh = calculate_extra_columns(electorate_mesh)
 
     '''
     print("electorate cols are")
     for col in electorate_mesh.columns:
         print(col)
     '''
-
-    electorate_mesh["Pct_Renting"] = (
-        electorate_mesh["G40_Tot_Tot"]
-        / electorate_mesh["G41_Total_Total"]
-        * 100
-    )
-
-    electorate_mesh["Pct_Apartments"] = (
-        electorate_mesh["G41_Flt_apart_Tot_Total"]
-        / electorate_mesh["G41_Total_Total"]
-        * 100
-    )
-
-    electorate_mesh["Pct_Separate_Houses"] = (
-        electorate_mesh["G41_Separate_house_Total"]
-        / electorate_mesh["G41_Total_Total"]
-        * 100
-    )
-
-    cols = [
-        "Australian_citizen_P",
-        "G02_Median_tot_hhd_inc_weekly",
-        "Pct_Renting",
-        "G02_Median_age_persons"
-    ]
-
-    scaler = MinMaxScaler()
-
-    scaled = scaler.fit_transform(
-        electorate_mesh[cols]
-    )
-
-    scaled_df = pd.DataFrame(
-        scaled,
-        columns=cols,
-        index=electorate_mesh.index
-    )
-
-    electorate_mesh["Feasibility"] = (
-        (0.5 * scaled_df["Australian_citizen_P"])
-        * (1 - scaled_df["G02_Median_tot_hhd_inc_weekly"])
-        * scaled_df["Pct_Renting"]
-        * (1 - scaled_df["G02_Median_age_persons"])
-    )
-
-    electorate_mesh["employment_rate"] = (
-        electorate_mesh["G46B_P_Tot_Emp_Tot"]
-        / electorate_mesh["G46B_P_Tot_LF_Tot"]
-    ) * 100
 
     # -------------------------
     # SUMS
@@ -1173,101 +1109,7 @@ def generate_html_map(
 
     electorate_mesh = electorate_mesh.copy()
 
-    #make some columns numeric
-    cols = [
-    "G40_Tot_Tot",
-    "G41_Total_Total",
-    "G41_Flt_apart_Tot_Total",
-    "G41_Separate_house_Total",
-    "G46B_P_Tot_Emp_Tot",
-    "G46B_P_Tot_LF_Tot"
-
-    ]
-
-    for col in cols:
-        electorate_mesh[col] = pd.to_numeric(
-            electorate_mesh[col],
-            errors="coerce"
-        )
-
-    occupation_cols = {
-        "managers": "G60B_P_Tot_Managers",
-        "professionals": "G60B_P_Tot_Professionals",
-        "technic_trades": "G60B_P_Tot_TechnicTrades_W",
-        "community_personal_service": "G60B_P_Tot_CommunPersnlSvc_W",
-        "clerical_admin": "G60B_P_Tot_ClericalAdminis_W",
-        "sales": "G60B_P_Tot_Sales_W",
-        "machinery_drivers": "G60B_P_Tot_Mach_oper_drivers",
-        "labourers": "G60B_P_Tot_Labourers",
-        "occ_not_stated": "G60B_P_Tot_Occu_ID_NS",
-    }
-
-
-    for name, col in occupation_cols.items():
-        electorate_mesh[col] = pd.to_numeric(
-            electorate_mesh[col],
-            errors="coerce"
-        )
-        electorate_mesh[f"pct_{name}"] = (
-            electorate_mesh[col] /
-            electorate_mesh["G46B_P_Tot_Emp_Tot"]
-        ) * 100
-
-    electorate_mesh["Pct_Renting"] = (
-        electorate_mesh["G40_Tot_Tot"]
-        / electorate_mesh["G41_Total_Total"]
-        * 100
-    )
-
-    electorate_mesh["Pct_Apartments"] = (
-        electorate_mesh["G41_Flt_apart_Tot_Total"]
-        / electorate_mesh["G41_Total_Total"]
-        * 100
-    )
-
-    electorate_mesh["Pct_Separate_Houses"] = (
-        electorate_mesh["G41_Separate_house_Total"]
-        / electorate_mesh["G41_Total_Total"]
-        * 100
-    )
-
-    electorate_mesh["Top Languages"] = (
-            electorate_mesh.apply(
-                get_top_languages,
-                axis=1
-            )
-        )
-
-    cols = [
-        "Australian_citizen_P",
-        "G02_Median_tot_hhd_inc_weekly",
-        "Pct_Renting",
-        "G02_Median_age_persons"
-    ]
-
-    scaler = MinMaxScaler()
-
-    scaled = scaler.fit_transform(
-        electorate_mesh[cols]
-    )
-
-    scaled_df = pd.DataFrame(
-        scaled,
-        columns=cols,
-        index=electorate_mesh.index
-    )
-
-    electorate_mesh["Feasibility"] = (
-        (0.5*scaled_df["Australian_citizen_P"])
-        * (1-scaled_df["G02_Median_tot_hhd_inc_weekly"])
-        * scaled_df["Pct_Renting"]
-        * (1-scaled_df["G02_Median_age_persons"])
-    )
-
-    electorate_mesh["employment_rate"] = (
-        electorate_mesh["G46B_P_Tot_Emp_Tot"] /
-        electorate_mesh["G46B_P_Tot_LF_Tot"]
-    ) * 100
+    electorate_mesh = calculate_extra_columns(electorate_mesh) 
 
     explore_kwargs = {
         "popup":popup_columns,
@@ -1524,6 +1366,117 @@ def generate_html_map(
 
     return m
 
+def calculate_extra_columns(sa1_dataframe):
+    numeric_cols = [
+        "G40_Tot_Tot",
+        "G41_Total_Total",
+        "G41_Flt_apart_Tot_Total",
+        "G41_Separate_house_Total",
+        "G46B_P_Tot_Emp_Tot",
+        "G46B_P_Tot_LF_Tot",
+        "G40_Tot_LT_Ste_ter_hsg_auth",
+    ]
+
+    for col in numeric_cols:
+        if col in sa1_dataframe.columns:
+            sa1_dataframe[col] = pd.to_numeric(
+                sa1_dataframe[col],
+                errors="coerce"
+            )
+
+
+    occupation_cols = {
+        "managers": "G60B_P_Tot_Managers",
+        "professionals": "G60B_P_Tot_Professionals",
+        "technic_trades": "G60B_P_Tot_TechnicTrades_W",
+        "community_personal_service": "G60B_P_Tot_CommunPersnlSvc_W",
+        "clerical_admin": "G60B_P_Tot_ClericalAdminis_W",
+        "sales": "G60B_P_Tot_Sales_W",
+        "machinery_drivers": "G60B_P_Tot_Mach_oper_drivers",
+        "labourers": "G60B_P_Tot_Labourers",
+        "occ_not_stated": "G60B_P_Tot_Occu_ID_NS",
+    }
+
+
+    for name, col in occupation_cols.items():
+        sa1_dataframe[col] = pd.to_numeric(
+            sa1_dataframe[col],
+            errors="coerce"
+        )
+        sa1_dataframe[f"pct_{name}"] = (
+            sa1_dataframe[col] /
+            sa1_dataframe["G46B_P_Tot_Emp_Tot"]
+        ) * 100
+
+    sa1_dataframe["Pct_Renting"] = (
+        sa1_dataframe["G40_Tot_Tot"]
+        / sa1_dataframe["G41_Total_Total"]
+        * 100
+    )
+
+    sa1_dataframe["Pct_Public_Housing"] = (
+        sa1_dataframe["G40_Tot_LT_Ste_ter_hsg_auth"]
+        / sa1_dataframe["G41_Total_Total"]
+        * 100
+    )
+
+    sa1_dataframe["Pct_Apartments"] = (
+        sa1_dataframe["G41_Flt_apart_Tot_Total"]
+        / sa1_dataframe["G41_Total_Total"]
+        * 100
+    )
+
+    sa1_dataframe["Pct_Separate_Houses"] = (
+        sa1_dataframe["G41_Separate_house_Total"]
+        / sa1_dataframe["G41_Total_Total"]
+        * 100
+    )
+
+    sa1_dataframe["Top Languages"] = (
+        sa1_dataframe.apply(
+            get_top_languages,
+            axis=1
+        )
+    )
+
+    feasibility_cols = [
+        "Australian_citizen_P",
+        "G02_Median_tot_hhd_inc_weekly",
+        "Pct_Renting",
+        "G02_Median_age_persons"
+    ]
+
+    if all(
+        col in sa1_dataframe.columns
+        for col in feasibility_cols
+    ):
+        scaler = MinMaxScaler()
+
+        scaled = scaler.fit_transform(
+            sa1_dataframe[feasibility_cols]
+        )
+
+        scaled_df = pd.DataFrame(
+            scaled,
+            columns=feasibility_cols,
+            index=sa1_dataframe.index
+        )
+
+        sa1_dataframe["Feasibility"] = (
+            (0.5 * scaled_df["Australian_citizen_P"])
+            * (1 - scaled_df["G02_Median_tot_hhd_inc_weekly"])
+            * scaled_df["Pct_Renting"]
+            * (1 - scaled_df["G02_Median_age_persons"])
+        )
+
+    sa1_dataframe["employment_rate"] = (
+        sa1_dataframe["G46B_P_Tot_Emp_Tot"]
+        / sa1_dataframe["G46B_P_Tot_LF_Tot"]
+    ) * 100
+
+
+    return sa1_dataframe
+
 def generate_heatmap(
     sa1_divisions,
     sed,
@@ -1549,95 +1502,25 @@ def generate_heatmap(
         return None
 
     electorate_mesh = electorate_mesh.copy()
+    #calculate percentages etc. and add them as columns
+    electorate_mesh = calculate_extra_columns(electorate_mesh) 
 
-    column_name = list(highlight_field.keys())[0]
+    
+    highlight_column = list(highlight_field.keys())[0]
     display_name = list(highlight_field.values())[0]
 
-    cols = [
-        "G40_Tot_Tot",
-        "G41_Total_Total",
-        "G41_Flt_apart_Tot_Total",
-        "G41_Separate_house_Total",
-        "G46B_P_Tot_Emp_Tot",
-        "G46B_P_Tot_LF_Tot"
-    ]
-
-    for col in cols:
-        if col in electorate_mesh.columns:
-            electorate_mesh[col] = pd.to_numeric(
-                electorate_mesh[col],
-                errors="coerce"
-            )
-
-    electorate_mesh["Pct_Renting"] = (
-        electorate_mesh["G40_Tot_Tot"]
-        / electorate_mesh["G41_Total_Total"]
-        * 100
-    )
-
-    electorate_mesh["Pct_Apartments"] = (
-        electorate_mesh["G41_Flt_apart_Tot_Total"]
-        / electorate_mesh["G41_Total_Total"]
-        * 100
-    )
-
-    electorate_mesh["Pct_Separate_Houses"] = (
-        electorate_mesh["G41_Separate_house_Total"]
-        / electorate_mesh["G41_Total_Total"]
-        * 100
-    )
-
-    electorate_mesh["Top Languages"] = (
-        electorate_mesh.apply(
-            get_top_languages,
-            axis=1
-        )
-    )
-
-    feasibility_cols = [
-        "Australian_citizen_P",
-        "G02_Median_tot_hhd_inc_weekly",
-        "Pct_Renting",
-        "G02_Median_age_persons"
-    ]
-
-    if all(
-        col in electorate_mesh.columns
-        for col in feasibility_cols
-    ):
-        scaler = MinMaxScaler()
-
-        scaled = scaler.fit_transform(
-            electorate_mesh[feasibility_cols]
-        )
-
-        scaled_df = pd.DataFrame(
-            scaled,
-            columns=feasibility_cols,
-            index=electorate_mesh.index
-        )
-
-        electorate_mesh["Feasibility"] = (
-            (0.5 * scaled_df["Australian_citizen_P"])
-            * (1 - scaled_df["G02_Median_tot_hhd_inc_weekly"])
-            * scaled_df["Pct_Renting"]
-            * (1 - scaled_df["G02_Median_age_persons"])
-        )
-
-    electorate_mesh["employment_rate"] = (
-        electorate_mesh["G46B_P_Tot_Emp_Tot"]
-        / electorate_mesh["G46B_P_Tot_LF_Tot"]
-    ) * 100
-
-    if column_name not in electorate_mesh.columns:
+    if highlight_column not in electorate_mesh.columns:
         raise ValueError(
-            f"Column '{column_name}' not found in electorate mesh data."
+            f"Column '{highlight_column}' not found in electorate mesh data."
         )
 
-    electorate_mesh[column_name] = pd.to_numeric(
-        electorate_mesh[column_name],
+    #turn highlight data numeric so we have a nice gradient legend
+    electorate_mesh[highlight_column] = pd.to_numeric(
+        electorate_mesh[highlight_column],
         errors="coerce"
     )
+
+
 
     electorate_mesh = electorate_mesh.to_crs(
         epsg=3857
@@ -1652,7 +1535,7 @@ def generate_heatmap(
     )
 
     electorate_mesh.plot(
-        column=column_name,
+        column=highlight_column,
         cmap="YlOrRd",
         linewidth=0.1,
         edgecolor="white",
@@ -1731,6 +1614,8 @@ def generate_heatmap(
         print(
             f"Heatmap saved to: {filename}"
         )
+
+        plt.close()
     else:
         plt.show()
 
@@ -1767,9 +1652,21 @@ def expand_osm_tags(gdf):
 
 if __name__ == "__main__":
 
+    args = sys.argv[1:]
+
+    if args:
+        if args[0] not in ["all", "census"]:
+            raise RuntimeError('Reload argument must be "census" or "all" (census, osm)')
+    else:
+        args.append("none")
+
+    
+    print(f"Regenerating {args[0]}")
+
+
     sa1_divisions, suburbs, sed, services = (
         load_cached_datasets(
-            force_reload=False
+            force_reload=args[0]
         )
     )
 
@@ -1794,6 +1691,7 @@ if __name__ == "__main__":
     heatmap_columns = [{"G40_Tot_LT_Ste_ter_hsg_auth": "Public Housing (absolute)"},
         {"G02_Median_tot_prsnl_inc_weekly": "Median Personal Income ($/week)"},
         {"Pct_Renting": "Renting (%)"},
+        {"Pct_Public_Housing": "Public Housing (% of Households))"},
         {"G13C_POL_Arabic_Tot":"Arabic Speakers (absolute)"},
         {"G13E_POL_Vietnamese_Tot":"Vietnamese Speakers (absolute)"},
         {"G13C_POL_CL_Canton_Tot":"Cantonese Speakers (absolute)"},
@@ -1861,7 +1759,6 @@ if __name__ == "__main__":
                 },
         )
 
-        '''
         #uncomment this to generate heatmaps
         for col in heatmap_columns:
             generate_heatmap(
@@ -1871,7 +1768,6 @@ if __name__ == "__main__":
                 highlight_field= col,
                 saveChart = True
             )
-        '''
 
     
     
