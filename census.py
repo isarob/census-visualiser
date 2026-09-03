@@ -9,10 +9,11 @@ import folium
 import pandas as pd
 import geopandas as gpd
 import os
+import sys
 
 DATA_DIR = Path(__file__).resolve().parent
 CACHE_DIR = DATA_DIR / "cache"
-SA1_YEAR=2021
+SA1_YEAR=2016
 
 def load_cached_datasets(
     data_dir=DATA_DIR,
@@ -136,13 +137,13 @@ def load_cached_datasets(
         "G09C",
         "G09D", # birthplace
         "G13", # languages
-        "G40",  # rent G40 for 2021, G36 for 2016
-        "G41",  # dwelling structure
-        "G43",  # labour summary
-        "G46",  # labour force status
-        "G54",  # industry
-        "G60",  # occupation
-        "G61"
+        "G36",  # rent G40 for 2021, G36 for 2016
+        "G38",  # dwelling structure
+        "G40",  # labour summary
+        "G43",  # labour force status
+        "G52",  # industry
+        "G57",  # occupation
+        "G58"
     ]
 
     gcp_root = (
@@ -455,8 +456,7 @@ def load_cached_datasets(
         "(this could take a while)"
     )
 
-    '''
-    comment out the loading and uncomment this if you've loaded osm data before and are changing the census cache
+    #comment out the loading and uncomment this if you've loaded osm data before and are changing the census cache
     pois = gpd.read_parquet(
             pois_cache
             )
@@ -503,6 +503,7 @@ def load_cached_datasets(
 
     #put tags in poi["tags"] into main tags
     pois = expand_osm_tags(pois)
+    '''
 
     # --------------------------------------------------------------
     # Save cache
@@ -938,12 +939,12 @@ def electorate_summary(
 
     # make some columns numeric
     cols = [
-        "G40_Tot_Tot",
-        "G41_Total_Total",
-        "G41_Flt_apart_Tot_Total",
-        "G41_Separate_house_Total",
-        "G46B_P_Tot_Emp_Tot",
-        "G46B_P_Tot_LF_Tot"
+        "G36_Tot_Tot",
+        "G38_Total_Total",
+        "G38_Flt_apart_Tot_Total",
+        "G38_Separate_house_Total",
+        "G43B_P_Tot_Emp_Tot",
+        "G43B_P_Tot_LF_Tot"
     ]
 
     for col in cols:
@@ -960,20 +961,20 @@ def electorate_summary(
     '''
 
     electorate_mesh["Pct_Renting"] = (
-        electorate_mesh["G40_Tot_Tot"]
-        / electorate_mesh["G41_Total_Total"]
+        electorate_mesh["G36_Tot_Tot"]
+        / electorate_mesh["G38_Total_Total"]
         * 100
     )
 
     electorate_mesh["Pct_Apartments"] = (
-        electorate_mesh["G41_Flt_apart_Tot_Total"]
-        / electorate_mesh["G41_Total_Total"]
+        electorate_mesh["G38_Flt_apart_Tot_Total"]
+        / electorate_mesh["G38_Total_Total"]
         * 100
     )
 
     electorate_mesh["Pct_Separate_Houses"] = (
-        electorate_mesh["G41_Separate_house_Total"]
-        / electorate_mesh["G41_Total_Total"]
+        electorate_mesh["G38_Separate_house_Total"]
+        / electorate_mesh["G38_Total_Total"]
         * 100
     )
 
@@ -1004,8 +1005,8 @@ def electorate_summary(
     )
 
     electorate_mesh["employment_rate"] = (
-        electorate_mesh["G46B_P_Tot_Emp_Tot"]
-        / electorate_mesh["G46B_P_Tot_LF_Tot"]
+        electorate_mesh["G43B_P_Tot_Emp_Tot"]
+        / electorate_mesh["G43B_P_Tot_LF_Tot"]
     ) * 100
 
     # -------------------------
@@ -1175,12 +1176,12 @@ def generate_html_map(
 
     #make some columns numeric
     cols = [
-    "G40_Tot_Tot",
-    "G41_Total_Total",
-    "G41_Flt_apart_Tot_Total",
-    "G41_Separate_house_Total",
-    "G46B_P_Tot_Emp_Tot",
-    "G46B_P_Tot_LF_Tot"
+    "G36_Tot_Tot",
+    "G38_Total_Total",
+    "G38_Flt_apart_Tot_Total",
+    "G38_Separate_house_Total",
+    "G43B_P_Tot_Emp_Tot",
+    "G43B_P_Tot_LF_Tot"
 
     ]
 
@@ -1191,15 +1192,15 @@ def generate_html_map(
         )
 
     occupation_cols = {
-        "managers": "G60B_P_Tot_Managers",
-        "professionals": "G60B_P_Tot_Professionals",
-        "technic_trades": "G60B_P_Tot_TechnicTrades_W",
-        "community_personal_service": "G60B_P_Tot_CommunPersnlSvc_W",
-        "clerical_admin": "G60B_P_Tot_ClericalAdminis_W",
-        "sales": "G60B_P_Tot_Sales_W",
-        "machinery_drivers": "G60B_P_Tot_Mach_oper_drivers",
-        "labourers": "G60B_P_Tot_Labourers",
-        "occ_not_stated": "G60B_P_Tot_Occu_ID_NS",
+        "managers": "G57B_P_Tot_Managers",
+        "professionals": "G57B_P_Tot_Professionals",
+        "technic_trades": "G57B_P_Tot_TechnicTrades_W",
+        "community_personal_service": "G57B_P_Tot_CommunPersnlSvc_W",
+        "clerical_admin": "G57B_P_Tot_ClericalAdminis_W",
+        "sales": "G57B_P_Tot_Sales_W",
+        "machinery_drivers": "G57B_P_Tot_Mach_oper_drivers",
+        "labourers": "G57B_P_Tot_Labourers",
+        "occ_not_stated": "G57B_P_Tot_Occu_ID_NS",
     }
 
 
@@ -1210,24 +1211,24 @@ def generate_html_map(
         )
         electorate_mesh[f"pct_{name}"] = (
             electorate_mesh[col] /
-            electorate_mesh["G46B_P_Tot_Emp_Tot"]
+            electorate_mesh["G43B_P_Tot_Emp_Tot"]
         ) * 100
 
     electorate_mesh["Pct_Renting"] = (
-        electorate_mesh["G40_Tot_Tot"]
-        / electorate_mesh["G41_Total_Total"]
+        electorate_mesh["G36_Tot_Tot"]
+        / electorate_mesh["G38_Total_Total"]
         * 100
     )
 
     electorate_mesh["Pct_Apartments"] = (
-        electorate_mesh["G41_Flt_apart_Tot_Total"]
-        / electorate_mesh["G41_Total_Total"]
+        electorate_mesh["G38_Flt_apart_Tot_Total"]
+        / electorate_mesh["G38_Total_Total"]
         * 100
     )
 
     electorate_mesh["Pct_Separate_Houses"] = (
-        electorate_mesh["G41_Separate_house_Total"]
-        / electorate_mesh["G41_Total_Total"]
+        electorate_mesh["G38_Separate_house_Total"]
+        / electorate_mesh["G38_Total_Total"]
         * 100
     )
 
@@ -1265,8 +1266,8 @@ def generate_html_map(
     )
 
     electorate_mesh["employment_rate"] = (
-        electorate_mesh["G46B_P_Tot_Emp_Tot"] /
-        electorate_mesh["G46B_P_Tot_LF_Tot"]
+        electorate_mesh["G43B_P_Tot_Emp_Tot"] /
+        electorate_mesh["G43B_P_Tot_LF_Tot"]
     ) * 100
 
     explore_kwargs = {
@@ -1554,12 +1555,12 @@ def generate_heatmap(
     display_name = list(highlight_field.values())[0]
 
     cols = [
-        "G40_Tot_Tot",
-        "G41_Total_Total",
-        "G41_Flt_apart_Tot_Total",
-        "G41_Separate_house_Total",
-        "G46B_P_Tot_Emp_Tot",
-        "G46B_P_Tot_LF_Tot"
+        "G36_Tot_Tot",
+        "G38_Total_Total",
+        "G38_Flt_apart_Tot_Total",
+        "G38_Separate_house_Total",
+        "G43B_P_Tot_Emp_Tot",
+        "G43B_P_Tot_LF_Tot"
     ]
 
     for col in cols:
@@ -1570,20 +1571,20 @@ def generate_heatmap(
             )
 
     electorate_mesh["Pct_Renting"] = (
-        electorate_mesh["G40_Tot_Tot"]
-        / electorate_mesh["G41_Total_Total"]
+        electorate_mesh["G36_Tot_Tot"]
+        / electorate_mesh["G38_Total_Total"]
         * 100
     )
 
     electorate_mesh["Pct_Apartments"] = (
-        electorate_mesh["G41_Flt_apart_Tot_Total"]
-        / electorate_mesh["G41_Total_Total"]
+        electorate_mesh["G38_Flt_apart_Tot_Total"]
+        / electorate_mesh["G38_Total_Total"]
         * 100
     )
 
     electorate_mesh["Pct_Separate_Houses"] = (
-        electorate_mesh["G41_Separate_house_Total"]
-        / electorate_mesh["G41_Total_Total"]
+        electorate_mesh["G38_Separate_house_Total"]
+        / electorate_mesh["G38_Total_Total"]
         * 100
     )
 
@@ -1625,8 +1626,8 @@ def generate_heatmap(
         )
 
     electorate_mesh["employment_rate"] = (
-        electorate_mesh["G46B_P_Tot_Emp_Tot"]
-        / electorate_mesh["G46B_P_Tot_LF_Tot"]
+        electorate_mesh["G43B_P_Tot_Emp_Tot"]
+        / electorate_mesh["G43B_P_Tot_LF_Tot"]
     ) * 100
 
     if column_name not in electorate_mesh.columns:
@@ -1767,9 +1768,12 @@ def expand_osm_tags(gdf):
 
 if __name__ == "__main__":
 
+    args = sys.argv[1:]
+    print("Args are: " + args[0])
+
     sa1_divisions, suburbs, sed, services = (
         load_cached_datasets(
-            force_reload=False
+            force_reload=True
         )
     )
 
@@ -1791,7 +1795,7 @@ if __name__ == "__main__":
        
     '''
     #add a column here to generate a heatmap based on it
-    heatmap_columns = [{"G40_Tot_LT_Ste_ter_hsg_auth": "Public Housing (absolute)"},
+    heatmap_columns = [{"G36_Tot_LT_Ste_ter_hsg_auth": "Public Housing (absolute)"},
         {"G02_Median_tot_prsnl_inc_weekly": "Median Personal Income ($/week)"},
         {"Pct_Renting": "Renting (%)"},
         {"G13C_POL_Arabic_Tot":"Arabic Speakers (absolute)"},
@@ -1834,28 +1838,28 @@ if __name__ == "__main__":
 
 
                 # Landlord type
-                "G40_Tot_LT_Real_eSte_agent": "Rentals via Real Estate Agent",
-                "G40_Tot_LT_Psn_not_Sme_hhd": "Rentals via Private Landlord",
-                "G40_Tot_LT_Ste_ter_hsg_auth": "State/Territory Housing Authority",
-                "G40_Tot_LT_com_hou_pro": "Community Housing Provider",
-                "G40_Tot_Tot": "Total Rentals",
+                "G36_Tot_LT_Real_eSte_agent": "Rentals via Real Estate Agent",
+                "G36_Tot_LT_Psn_not_Sme_hhd": "Rentals via Private Landlord",
+                "G36_Tot_LT_Ste_ter_hsg_auth": "State/Territory Housing Authority",
+                "G36_Tot_LT_com_hou_pro": "Community Housing Provider",
+                "G36_Tot_Tot": "Total Rentals",
 
 
                 # Households
-                "G41_Total_Total": "Total Households",
-                "G41_Flt_apart_Tot_Total": "Total Apartments",
+                "G38_Total_Total": "Total Households",
+                "G38_Flt_apart_Tot_Total": "Total Apartments",
 
                 "G02_Average_household_size": "Average Household Size",
 
-                "G61B_P_Tot_0": "Worked 0 Hours",
-                "G61B_P_Tot_1_19": "Worked 1–19 Hours",
-                "G61B_P_Tot_20_29": "Worked 20–29 Hours",
-                "G61B_P_Tot_30_34": "Worked 30–34 Hours",
-                "G61B_P_Tot_35_39": "Worked 35–39 Hours",
-                "G61B_P_Tot_40_44": "Worked 40–44 Hours",
-                "G61B_P_Tot_45_49": "Worked 45–49 Hours",
-                "G61B_P_Tot_50_over": "Worked 50+ Hours",
-                "G61B_P_Tot_hours_NS": "Hours Worked Not Stated",
+                "G58B_P_Tot_0": "Worked 0 Hours",
+                "G58B_P_Tot_1_19": "Worked 1–19 Hours",
+                "G58B_P_Tot_20_29": "Worked 20–29 Hours",
+                "G58B_P_Tot_30_34": "Worked 30–34 Hours",
+                "G58B_P_Tot_35_39": "Worked 35–39 Hours",
+                "G58B_P_Tot_40_44": "Worked 40–44 Hours",
+                "G58B_P_Tot_45_49": "Worked 45–49 Hours",
+                "G58B_P_Tot_50_over": "Worked 50+ Hours",
+                "G58B_P_Tot_hours_NS": "Hours Worked Not Stated",
 
 
                 },
@@ -1937,13 +1941,13 @@ if __name__ == "__main__":
     "Pct_Apartments": "Apartments (%)",
 
     # Landlord type
-    "G40_Tot_LT_Real_eSte_agent": "Rentals via Real Estate Agent",
-    "G40_Tot_LT_Psn_not_Sme_hhd": "Rentals via Private Landlord",
-    "G40_Tot_LT_Ste_ter_hsg_auth": "State/Territory Housing Authority",
-    "G40_Tot_LT_com_hou_pro": "Community Housing Provider",
+    "G36_Tot_LT_Real_eSte_agent": "Rentals via Real Estate Agent",
+    "G36_Tot_LT_Psn_not_Sme_hhd": "Rentals via Private Landlord",
+    "G36_Tot_LT_Ste_ter_hsg_auth": "State/Territory Housing Authority",
+    "G36_Tot_LT_com_hou_pro": "Community Housing Provider",
 
     # Households
-    "G41_Total_Total": "Total Households",
+    "G38_Total_Total": "Total Households",
     "G02_Average_household_size": "Average Household Size",
 
 
@@ -1964,7 +1968,7 @@ if __name__ == "__main__":
 
     tooltip_fields = {
         "Tot_P_P": "Population",
-        "G41_Total_Total": "Total Households",
+        "G38_Total_Total": "Total Households",
         "G02_Median_age_persons": "Median Age",
         "G02_Median_tot_prsnl_inc_weekly": "Median Personal Income ($/week)",
         "Pct_Renting": "Renting (%)",
