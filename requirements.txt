@@ -1,0 +1,7 @@
+pandas
+geopandas
+scikit-learn
+matplotlib
+pyrosm
+contextily
+folium
