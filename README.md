@@ -2,36 +2,35 @@
 
 A Python program for combining Australian Census data, electoral boundaries, and OpenStreetMap data to produce electorate-level analysis, summaries, heatmaps, and interactive maps.
 
-## Project structure
+## Structure
 
 ```
 census-visualiser/
-│
-├── main.py
-├── calculations.py
-├── config.py
-├── data_loader.py
-├── fields.py
-├── maps.py
-├── osm.py
-├── services.py
-├── spatial.py
-├── README.md
-├── LICENSE
-├── requirements.txt
-│
-├── data/
-│   ├── 2021_GCP_SA1_for_NSW_short-header/
-│   ├── SA1_2021_AUST_SHP_GDA2020/
-│   ├── SAL_2021_AUST_GDA2020_SHP/
-│   ├── SED_2025_AUST_GDA2020/
-│   └── new-south-wales-latest.osm.pbf
-│
-├── cache/
-│
-└── output/
-├── heatmaps/
-└── maps/
+    main.py
+    calculations.py
+    config.py
+    data_loader.py
+    fields.py
+    maps.py
+    osm.py
+    services.py
+    spatial.py
+    README.md
+    LICENSE
+    requirements.txt
+
+    data/
+        2021_GCP_SA1_for_NSW_short-header/
+        SA1_2021_AUST_SHP_GDA2020/
+        SAL_2021_AUST_GDA2020_SHP/
+        SED_2025_AUST_GDA2020/
+        new-south-wales-latest.osm.pbf
+
+    cache/
+
+    output/
+        heatmaps/
+        maps/
 ```
 
 ### Directory purposes
