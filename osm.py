@@ -108,7 +108,6 @@ def load_osm_pois(
 def expand_osm_tags(
         gdf: gpd.GeoDataFrame
 ) -> gpd.GeoDataFrame:
-
     gdf = gdf.copy()
 
     tag_rows = []

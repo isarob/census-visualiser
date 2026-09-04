@@ -1,9 +1,31 @@
 from pathlib import Path
 
-DATA_DIR = Path(__file__).resolve().parent
-CACHE_DIR = DATA_DIR / "cache"
+PROJECT_DIR = Path(__file__).resolve().parent
+
+# Input/source data.
+DATA_DIR = PROJECT_DIR / "data"
+
+# Cached/generated intermediate data.
+CACHE_DIR = PROJECT_DIR / "cache"
+
+# Generated output.
+OUTPUT_DIR = PROJECT_DIR / "output"
+HEATMAP_DIR = OUTPUT_DIR / "heatmaps"
+MAP_DIR = OUTPUT_DIR / "maps"
+
+# Toggle heatmap generation.
+GENERATE_HEATMAPS = True
+
+
 SA1_YEAR = 2021
 CARTO_API_KEY = "cb1_296x_1_e8d7efe65c17bb102d553727"
+CARTO_TILES = (
+    "https://basemaps.cartocdn.com/rastertiles/"
+    "voyager/{z}/{x}/{y}.png"
+    f"?key={CARTO_API_KEY}"
+)
+
+CARTO_ATTRIBUTION = "© OpenStreetMap contributors, © CARTO"
 GCP_TABLES = [
     "G01",
     "G02",
@@ -31,35 +53,35 @@ ELECTORATES = [
     "Wallsend",
 ]
 POI_FILTER = {
-            "amenity": [
-                "hospital",
-                "clinic",
-                "doctors",
-                "school",
-                "childcare",
-                "kindergarten",
-                "community_centre",
-                "library",
-                "place_of_worship",
-            ],
+    "amenity": [
+        "hospital",
+        "clinic",
+        "doctors",
+        "school",
+        "childcare",
+        "kindergarten",
+        "community_centre",
+        "library",
+        "place_of_worship",
+    ],
 
-            "healthcare": [
-                "hospital",
-                "clinic",
-                "doctor",
-                "physiotherapist",
-                "rehabilitation",
-                "centre",
-            ],
+    "healthcare": [
+        "hospital",
+        "clinic",
+        "doctor",
+        "physiotherapist",
+        "rehabilitation",
+        "centre",
+    ],
 
-            "shop": [
-                "mall",
-            ],
+    "shop": [
+        "mall",
+    ],
 
-            "leisure": [
-                "sports_centre",
-                "stadium",
-            ],
+    "leisure": [
+        "sports_centre",
+        "stadium",
+    ],
 
-            "social_facility": True,
-        }
+    "social_facility": True,
+}

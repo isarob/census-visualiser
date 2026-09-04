@@ -4,7 +4,7 @@ import geopandas as gpd
 import pandas as pd
 
 from calculations import electorate_summary
-from config import ELECTORATES
+from config import ELECTORATES, GENERATE_HEATMAPS
 from data_loader import load_cached_datasets
 from fields import (
     SUMMARY_FIELDS,
@@ -14,6 +14,8 @@ from fields import (
 )
 from maps import generate_heatmap, generate_html_map
 from spatial import get_electorate
+
+
 
 if __name__ == "__main__":
 
@@ -38,7 +40,8 @@ if __name__ == "__main__":
     # list_electorate_names(sed)
 
     for electorate in ELECTORATES:
-        # print electorate summaries
+
+        # Generate and print the electorate summary.
         summary = electorate_summary(
             sa1_divisions,
             sed,
@@ -46,15 +49,16 @@ if __name__ == "__main__":
             SUMMARY_FIELDS,
         )
 
-        # uncomment this to generate heatmaps
-        for col in HEATMAP_COLUMNS:
-            generate_heatmap(
-                sa1_divisions,
-                sed,
-                electorate,
-                highlight_field=col,
-                saveChart=True
-            )
+        # Generate heatmaps when enabled on config.py.
+        if GENERATE_HEATMAPS:
+            for col in HEATMAP_COLUMNS:
+                generate_heatmap(
+                    sa1_divisions,
+                    sed,
+                    electorate,
+                    highlight_field=col,
+                    save_chart=True,
+                )
 
     # get the services for the electorates we're looking at
     services_dfs = []
