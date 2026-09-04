@@ -47,7 +47,7 @@ census-visualiser/
 
 Install the Python dependencies using:
 
-pip install -r requirements.txt
+```pip install -r requirements.txt```
 
 Using a Python venv is recommended.
 
@@ -55,6 +55,7 @@ Using a Python venv is recommended.
 
 The following datasets are required.
 
+---
 #### 2021 Census General Community Profile
 
 Source: https://www.abs.gov.au/census/find-census-data/datapacks
@@ -67,6 +68,8 @@ Example:
 
 `data/2021_GCP_SA1_for_NSW_short-header/`
 
+---
+
 #### Statistical Area Level 1 boundaries
 
 Source: https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs/edition-3-july-2021-june-2026/access-and-downloads/digital-boundary-files
@@ -77,6 +80,8 @@ Example:
 
 `data/SA1_2021_AUST_SHP_GDA2020/`
 
+---
+
 #### Suburbs and Localities boundaries
 
 Use **Suburbs and Localities - 2021 - Shapefile**
@@ -85,6 +90,8 @@ Example:
 
 `data/SAL_2021_AUST_GDA2020_SHP/`
 
+---
+
 #### State Electoral Divisions
 
 Use **State Electoral Divisions - 2025 - Shapefile**.
@@ -92,6 +99,8 @@ Use **State Electoral Divisions - 2025 - Shapefile**.
 Example:
 
 `data/SED_2025_AUST_GDA2020/`
+
+---
 
 #### OpenStreetMap data
 
@@ -136,7 +145,7 @@ CARTO configuration is also stored here.
 
 The normal command is now:
 
-`python3 main.py`
+```python3 main.py```
 
 When run normally, the program loads the cached datasets, calculates electorate summaries, prepares service data, and generates the interactive map.
 
@@ -180,13 +189,7 @@ Heatmap generation is controlled by a setting in `config.py`:
 GENERATE_HEATMAPS = False
 ```
 
-Set this to:
-
-```python
-GENERATE_HEATMAPS = True
-```
-
-to generate all heatmaps listed in `HEATMAP_COLUMNS` in `fields.py`.
+Set this to `True` to generate all heatmaps listed in `HEATMAP_COLUMNS` in `fields.py`.
 
 When enabled, heatmaps are generated for every configured electorate and saved to:
 
@@ -200,7 +203,6 @@ For example:
 output/heatmaps/Auburn_Feasibility_2021.png
 ```
 
-Keeping this disabled during normal development avoids regenerating a large number of image files every time the program is run.
 
 ## Modules
 
@@ -315,7 +317,7 @@ Changing the fields displayed by the application should generally be done here.
 
 ---
 
-### `spactial.py`
+### `spatial.py`
 
 Contains functions for selecting and working with geographic areas.
 
@@ -348,7 +350,9 @@ Creates an interactive Folium map containing:
 
 The resulting HTML file is saved in:
 
-`output/maps/`
+```
+output/maps/
+```
 
 The function can also accept a custom tile provider instead of the default CARTO basemap.
 
@@ -366,7 +370,9 @@ The heatmap includes:
 
 Generated heatmaps are saved in:
 
-`output/heatmaps/`
+```
+output/heatmaps/
+```
 
 ---
 
