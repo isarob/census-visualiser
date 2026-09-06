@@ -33,7 +33,6 @@ census-visualiser/
         maps/
 ```
 
-### Directory purposes
 
 `data/` contains the original source datasets downloaded from the ABS and OpenStreetMap.
 
