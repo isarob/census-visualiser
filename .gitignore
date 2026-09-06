@@ -1,5 +1,14 @@
-new-south-wales-latest.osm.pbf
-/2021_GCP_SA1_for_NSW_short-header
-/SA1_2021_AUST_SHP_GDA2020
-/SAL_2021_AUST_GDA2020_SHP
-/SED_2025_AUST_GDA2020
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# IDE
+.idea/
+
+# Data files
+/data/
+/cache/
+
+# Generated output
+/output/
