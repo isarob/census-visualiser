@@ -16,7 +16,6 @@ MAP_DIR = OUTPUT_DIR / "maps"
 # Toggle heatmap generation.
 GENERATE_HEATMAPS = True
 
-
 SA1_YEAR = 2021
 CARTO_API_KEY = "cb1_296x_1_e8d7efe65c17bb102d553727"
 CARTO_TILES = (
@@ -25,24 +24,21 @@ CARTO_TILES = (
     f"?key={CARTO_API_KEY}"
 )
 
+GEOGRAPHY_COLUMNS = {
+    2016: {
+        "suburb_code": "SSC_CODE",
+        "suburb_name": "SSC_NAME",
+        "sa2_name": "SA2_NAME16",
+    },
+
+    2021: {
+        "suburb_code": "SAL_CODE21",
+        "suburb_name": "SAL_NAME21",
+        "sa2_name": "SA2_NAME21",
+    },
+}
+
 CARTO_ATTRIBUTION = "© OpenStreetMap contributors, © CARTO"
-GCP_TABLES = [
-    "G01",
-    "G02",
-    "G08",
-    "G09A",
-    "G09B",
-    "G09C",
-    "G09D",
-    "G13",
-    "G40",
-    "G41",
-    "G43",
-    "G46",
-    "G54",
-    "G60",
-    "G61",
-]
 
 ELECTORATES = [
     "Auburn",
@@ -85,3 +81,5 @@ POI_FILTER = {
 
     "social_facility": True,
 }
+
+

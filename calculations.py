@@ -3,6 +3,7 @@ import re
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
+from fields import get_gcp_column
 from spatial import (
     get_electorate,
     sa1_divisions_in_electorate,
@@ -183,13 +184,13 @@ def electorate_summary(
 
 def calculate_extra_columns(sa1_dataframe):
     numeric_cols = [
-        "G40_Tot_Tot",
-        "G41_Total_Total",
-        "G41_Flt_apart_Tot_Total",
-        "G41_Separate_house_Total",
-        "G46B_P_Tot_Emp_Tot",
-        "G46B_P_Tot_LF_Tot",
-        "G40_Tot_LT_Ste_ter_hsg_auth",
+        get_gcp_column("total_rentals"),
+        get_gcp_column("total_households"),
+        get_gcp_column("apartments"),
+        get_gcp_column("separate_houses"),
+        get_gcp_column("total_employed"),
+        get_gcp_column("total_labour_force"),
+        get_gcp_column("state_housing_authority"),
     ]
 
     for col in numeric_cols:
@@ -200,49 +201,85 @@ def calculate_extra_columns(sa1_dataframe):
             )
 
     occupation_cols = {
-        "managers": "G60B_P_Tot_Managers",
-        "professionals": "G60B_P_Tot_Professionals",
-        "technic_trades": "G60B_P_Tot_TechnicTrades_W",
-        "community_personal_service": "G60B_P_Tot_CommunPersnlSvc_W",
-        "clerical_admin": "G60B_P_Tot_ClericalAdminis_W",
-        "sales": "G60B_P_Tot_Sales_W",
-        "machinery_drivers": "G60B_P_Tot_Mach_oper_drivers",
-        "labourers": "G60B_P_Tot_Labourers",
-        "occ_not_stated": "G60B_P_Tot_Occu_ID_NS",
+        "managers": get_gcp_column("managers"),
+        "professionals": get_gcp_column("professionals"),
+        "technic_trades": get_gcp_column("technicians_and_trades"),
+        "community_personal_service": get_gcp_column(
+            "community_and_personal_service"
+        ),
+        "clerical_admin": get_gcp_column(
+            "clerical_and_administrative"
+        ),
+        "sales": get_gcp_column("sales"),
+        "machinery_drivers": get_gcp_column(
+            "machinery_operators_and_drivers"
+        ),
+        "labourers": get_gcp_column("labourers"),
+        "occ_not_stated": get_gcp_column(
+            "occupation_not_stated"
+        ),
     }
 
+    total_employed = get_gcp_column(
+        "total_employed"
+    )
+
     for name, col in occupation_cols.items():
+        if col not in sa1_dataframe.columns:
+            continue
+
         sa1_dataframe[col] = pd.to_numeric(
             sa1_dataframe[col],
             errors="coerce"
         )
+
         sa1_dataframe[f"pct_{name}"] = (
-                                               sa1_dataframe[col] /
-                                               sa1_dataframe["G46B_P_Tot_Emp_Tot"]
-                                       ) * 100
+            sa1_dataframe[col]
+            / sa1_dataframe[total_employed]
+        ) * 100
+
+    total_rentals = get_gcp_column(
+        "total_rentals"
+    )
+
+    total_households = get_gcp_column(
+        "total_households"
+    )
+
+    state_housing_authority = get_gcp_column(
+        "state_housing_authority"
+    )
+
+    apartments = get_gcp_column(
+        "apartments"
+    )
+
+    separate_houses = get_gcp_column(
+        "separate_houses"
+    )
 
     sa1_dataframe["Pct_Renting"] = (
-            sa1_dataframe["G40_Tot_Tot"]
-            / sa1_dataframe["G41_Total_Total"]
-            * 100
+        sa1_dataframe[total_rentals]
+        / sa1_dataframe[total_households]
+        * 100
     )
 
     sa1_dataframe["Pct_Public_Housing"] = (
-            sa1_dataframe["G40_Tot_LT_Ste_ter_hsg_auth"]
-            / sa1_dataframe["G41_Total_Total"]
-            * 100
+        sa1_dataframe[state_housing_authority]
+        / sa1_dataframe[total_households]
+        * 100
     )
 
     sa1_dataframe["Pct_Apartments"] = (
-            sa1_dataframe["G41_Flt_apart_Tot_Total"]
-            / sa1_dataframe["G41_Total_Total"]
-            * 100
+        sa1_dataframe[apartments]
+        / sa1_dataframe[total_households]
+        * 100
     )
 
     sa1_dataframe["Pct_Separate_Houses"] = (
-            sa1_dataframe["G41_Separate_house_Total"]
-            / sa1_dataframe["G41_Total_Total"]
-            * 100
+        sa1_dataframe[separate_houses]
+        / sa1_dataframe[total_households]
+        * 100
     )
 
     sa1_dataframe["Top Languages"] = (
@@ -253,15 +290,15 @@ def calculate_extra_columns(sa1_dataframe):
     )
 
     feasibility_cols = [
-        "Australian_citizen_P",
-        "G02_Median_tot_hhd_inc_weekly",
+        get_gcp_column("australian_citizen"),
+        get_gcp_column("median_household_income"),
         "Pct_Renting",
-        "G02_Median_age_persons"
+        get_gcp_column("median_age"),
     ]
 
     if all(
-            col in sa1_dataframe.columns
-            for col in feasibility_cols
+        col in sa1_dataframe.columns
+        for col in feasibility_cols
     ):
         scaler = MinMaxScaler()
 
@@ -276,15 +313,29 @@ def calculate_extra_columns(sa1_dataframe):
         )
 
         sa1_dataframe["Feasibility"] = (
-                (0.5 * scaled_df["Australian_citizen_P"])
-                * (1 - scaled_df["G02_Median_tot_hhd_inc_weekly"])
-                * scaled_df["Pct_Renting"]
-                * (1 - scaled_df["G02_Median_age_persons"])
+            (0.5 * scaled_df[
+                get_gcp_column("australian_citizen")
+            ])
+            * (
+                1 - scaled_df[
+                    get_gcp_column("median_household_income")
+                ]
+            )
+            * scaled_df["Pct_Renting"]
+            * (
+                1 - scaled_df[
+                    get_gcp_column("median_age")
+                ]
+            )
         )
 
+    total_labour_force = get_gcp_column(
+        "total_labour_force"
+    )
+
     sa1_dataframe["employment_rate"] = (
-                                               sa1_dataframe["G46B_P_Tot_Emp_Tot"]
-                                               / sa1_dataframe["G46B_P_Tot_LF_Tot"]
-                                       ) * 100
+        sa1_dataframe[total_employed]
+        / sa1_dataframe[total_labour_force]
+    ) * 100
 
     return sa1_dataframe
