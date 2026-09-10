@@ -29,8 +29,7 @@ def associate_electorates(
         sed
 ):
     """
-    Spatially associate every Mesh Block with its 2021
-    State Electoral Division.
+    Spatially associate each SA1 division with a State Electoral Division.
     """
 
     if sa1_divisions.crs is None:
@@ -129,8 +128,8 @@ def associate_electorates(
     )
 
     print(
-        "\nMesh blocks associated with "
-        "2021 electorates."
+        "\nSA1 divisions associated with "
+        "State Electoral Divisions."
     )
 
     if unmatched:
@@ -152,7 +151,7 @@ def sa1_divisions_in_electorate(
         electorate
 ):
     """
-    Return all sa1 divisions belonging to a 2021
+    Return all SA1 divisions belonging to the selected
     State Electoral Division.
     """
 

@@ -11,7 +11,7 @@ import pandas as pd
 from calculations import calculate_extra_columns
 from config import (
     CARTO_TILES,
-    CARTO_ATTRIBUTION, HEATMAP_DIR, MAP_DIR,
+    CARTO_ATTRIBUTION, HEATMAP_DIR, MAP_DIR, SA1_YEAR,
 )
 from services import (
     prepare_services,
@@ -21,6 +21,7 @@ from spatial import (
     get_electorate,
     sa1_divisions_in_electorate,
 )
+
 
 def generate_html_map(
         sa1_divisions,
@@ -46,6 +47,7 @@ def generate_html_map(
     """
 
     # Determine the default output path if one was not provided.
+    # Determine the default output path if one was not provided.
     if save_path is None:
 
         # Create the maps output directory if it does not exist.
@@ -57,19 +59,19 @@ def generate_html_map(
         if isinstance(electorate, str):
             save_path = (
                     MAP_DIR
-                    / f"{electorate}_nswsocialists_data_2027.html"
+                    / f"{electorate}_nswsocialists_data_{SA1_YEAR}.html"
             )
 
         elif len(electorate) == 1:
             save_path = (
                     MAP_DIR
-                    / f"{electorate[0]}_nswsocialists_data_2027.html"
+                    / f"{electorate[0]}_nswsocialists_data_{SA1_YEAR}.html"
             )
 
         else:
             save_path = (
                     MAP_DIR
-                    / "multi_nswsocialists_data_2027.html"
+                    / f"multi_nswsocialists_data_{SA1_YEAR}.html"
             )
 
     # Convert popup and tooltip field dictionaries into
@@ -355,7 +357,7 @@ def generate_heatmap(
 
         filename = (
                 HEATMAP_DIR
-                / f"{safe_electorate}_{safe_field}_2021.png"
+                / f"{safe_electorate}_{safe_field}_{SA1_YEAR}.png"
         )
 
         # Save at high resolution for clearer output.

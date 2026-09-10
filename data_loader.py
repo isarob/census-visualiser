@@ -3,7 +3,8 @@ from pathlib import Path
 import geopandas as gpd
 import pandas as pd
 
-from config import DATA_DIR, CACHE_DIR, SA1_YEAR
+from config import CACHE_DIR, SA1_YEAR, DATA_DIR
+from fields import get_geography_column, get_gcp_table_id
 from osm import load_osm_pois
 from spatial import associate_electorates, get_electorate
 
@@ -18,9 +19,9 @@ def load_cached_datasets(
         exist_ok=True
     )
 
-    sa1_cache = CACHE_DIR / "sa1.parquet"
-    suburbs_cache = CACHE_DIR / "suburbs.parquet"
-    sed_cache = CACHE_DIR / "sed.parquet"
+    sa1_cache = CACHE_DIR / f"sa1_{SA1_YEAR}.parquet"
+    suburbs_cache = CACHE_DIR / f"suburbs_{SA1_YEAR}.parquet"
+    sed_cache = CACHE_DIR / "sed_2025.parquet"
 
     if electorates is None:
         raise ValueError(
@@ -102,6 +103,8 @@ def load_cached_datasets(
     suburbs_path = find_dataset_shapefile(
         data_dir,
         "SAL_2021"
+        if SA1_YEAR == 2021
+        else "SSC_2016"
     )
 
     sed_path = find_dataset_shapefile(
@@ -142,23 +145,47 @@ def load_cached_datasets(
     # Load all NSW SA1 GCP CSVs
     # --------------------------------------------------------------
 
-    # which gcp tables to use. if you change this make sure to set force_reload to true to get the new data
+    # 2021 Census General Community Profile (GCP) tables.
+    # Table definitions/titles:
+    # https://www.abs.gov.au/census/guide-census-data/2021-census-product-release-guide
+    # This selects which gcp tables to use. if you change this make sure to set force_reload to true to get the new data
     gcp_tables = [
-        "G01",
-        "G02",  # summary indicators
-        "G08",  # ancestry
-        "G09A",
-        "G09B",
-        "G09C",
-        "G09D",  # birthplace
-        "G13",  # languages
-        "G40",  # rent G40 for 2021, G36 for 2016
-        "G41",  # dwelling structure
-        "G43",  # labour summary
-        "G46",  # labour force status
-        "G54",  # industry
-        "G60",  # occupation
-        "G61"
+        get_gcp_table_id(
+            "selected_person_characteristics_by_sex"
+        ),
+        get_gcp_table_id(
+            "selected_medians_and_averages"
+        ),
+        get_gcp_table_id(
+            "ancestry_by_country_of_birth_of_parents"
+        ),
+        get_gcp_table_id(
+            "country_of_birth_of_person_by_age_by_sex"
+        ),
+        get_gcp_table_id(
+            "language_used_at_home_by_proficiency_in_spoken_english_by_sex"
+        ),
+        get_gcp_table_id(
+            "rent_weekly_by_landlord_type"
+        ),
+        get_gcp_table_id(
+            "dwelling_structure_by_number_of_bedrooms"
+        ),
+        get_gcp_table_id(
+            "selected_labour_force_education_and_migration_characteristics_by_sex"
+        ),
+        get_gcp_table_id(
+            "labour_force_status_by_age_by_sex"
+        ),
+        get_gcp_table_id(
+            "industry_of_employment_by_age_by_sex"
+        ),
+        get_gcp_table_id(
+            "occupation_by_age_by_sex"
+        ),
+        get_gcp_table_id(
+            "occupation_by_hours_worked_by_sex"
+        ),
     ]
 
     gcp_root = (
@@ -258,6 +285,7 @@ def load_cached_datasets(
         for column in [
             f"SA1_CODE_{SA1_YEAR}",
             f"SA1_7DIGITCODE_{SA1_YEAR}",
+            f"SA1_7DIG{str(SA1_YEAR)[-2:]}",
         ]:
             if column in table.columns:
                 sa1_code_column = column
@@ -352,6 +380,7 @@ def load_cached_datasets(
         columns={
             f"SA1_CODE{str(SA1_YEAR)[-2:]}": "SA1_CODE",
             f"SA1_7DIGITCODE_{SA1_YEAR}": "SA1_CODE",
+            f"SA1_7DIG{str(SA1_YEAR)[-2:]}": "SA1_CODE",
             f"SA1_7DIGIT": "SA1_CODE",
         }
     )
@@ -404,13 +433,29 @@ def load_cached_datasets(
         crs=sa1.crs
     )
 
+    suburb_code_column = get_geography_column(
+        "suburb_code"
+    )
+
+    suburb_name_column = get_geography_column(
+        "suburb_name"
+    )
+
     suburbs_lookup = suburbs[
         [
-            "SAL_CODE21",
-            "SAL_NAME21",
-            "geometry"
+            suburb_code_column,
+            suburb_name_column,
+            "geometry",
         ]
+
     ].copy()
+
+    suburbs_lookup = suburbs_lookup.rename(
+        columns={
+            suburb_code_column: "_SUBURB_CODE",
+            suburb_name_column: "_SUBURB",
+        }
+    )
 
     suburb_join = gpd.sjoin(
         sa1_point_gdf,
@@ -423,8 +468,8 @@ def load_cached_datasets(
         suburb_join[
             [
                 "SA1_CODE",
-                "SAL_CODE21",
-                "SAL_NAME21"
+                "_SUBURB_CODE",
+                "_SUBURB",
             ]
         ]
         .drop_duplicates(
@@ -439,12 +484,6 @@ def load_cached_datasets(
         validate="one_to_one"
     )
 
-    sa1 = sa1.rename(
-        columns={
-            "SAL_CODE": "_SUBURB_CODE",
-            "SAL_NAME21": "_SUBURB"
-        }
-    )
 
     # --------------------------------------------------------------
     # Associate SA1s with 2021 electorates
@@ -523,15 +562,18 @@ def load_cached_datasets(
 
 def find_dataset_shapefile(
         data_dir=DATA_DIR,
-        type=None
+        dataset_type=None
 ):
     """
     Recursively find a shapefile for one of the project datasets.
 
-    type:
-        "SA1" -> SA1 Divisions
-        "SAL"  -> Suburbs and Localities
-        "SED"  -> State Electoral Divisions
+    The search is case-insensitive.
+
+    dataset_type:
+        "SA1" -> SA1 divisions
+        "SAL" -> Suburbs and Localities
+        "SSC" -> State Suburbs
+        "SED" -> State Electoral Divisions
     """
 
     data_dir = Path(data_dir)
@@ -541,26 +583,26 @@ def find_dataset_shapefile(
     )
 
     matches = [
-        shp for shp in all_shapefiles
-        if type in str(shp)
-
+        shp
+        for shp in all_shapefiles
+        if dataset_type.casefold() in str(shp).casefold()
     ]
 
     if len(matches) == 0:
         raise FileNotFoundError(
-            f"Could not find {type} shapefile."
+            f"Could not find {dataset_type} shapefile."
         )
 
     if len(matches) > 1:
         print(
-            f"\nMultiple {type} shapefiles found:"
+            f"\nMultiple {dataset_type} shapefiles found:"
         )
 
         for shp in matches:
             print(f"  {shp}")
 
         raise RuntimeError(
-            f"More than one {type} shapefile found."
+            f"More than one {dataset_type} shapefile found."
         )
 
     return matches[0]

@@ -15,8 +15,6 @@ from fields import (
 from maps import generate_heatmap, generate_html_map
 from spatial import get_electorate
 
-
-
 if __name__ == "__main__":
 
     args = sys.argv[1:]
