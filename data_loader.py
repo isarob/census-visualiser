@@ -160,6 +160,9 @@ def load_cached_datasets(
             "ancestry_by_country_of_birth_of_parents"
         ),
         get_gcp_table_id(
+            "religious_affiliation_by_sex"
+        ),
+        get_gcp_table_id(
             "country_of_birth_of_person_by_age_by_sex"
         ),
         get_gcp_table_id(

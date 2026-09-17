@@ -44,6 +44,135 @@ def get_top_languages(row, n=5):
         for lang, count in langs[:n]
     )
 
+def get_top_nationalities(row):
+    nationality_cols = [
+        c for c in row.columns
+        if re.match(r"G09._P_[^_\W]*_Tot$", c)
+
+    ]
+
+
+    nationalities = []
+
+    for col in nationality_cols:
+
+        count = pd.to_numeric(row[col], errors="coerce").sum()
+
+        if pd.notna(count) and count > 0:
+            name = re.sub(r"G09._P_", "", col)
+
+            name = (
+                name
+                .replace("_Tot", "")
+                .replace("_", " ")
+            )
+
+            nationalities.append((name, count))
+
+    nationalities.sort(
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    return nationalities
+
+def get_top_ancestries(row):
+    ancestry_cols = [
+        c for c in row.columns
+        if re.match(r"G08_[^_\W]*_Tot_resp$", c)
+
+    ]
+
+    ancestries = []
+
+    for col in ancestry_cols:
+
+        count = pd.to_numeric(row[col], errors="coerce").sum()
+
+        if pd.notna(count) and count > 0:
+            name = re.sub(r"G08_", "", col)
+
+            name = (
+                name
+                .replace("_Tot_resp", "")
+                .replace("_", " ")
+            )
+
+            ancestries.append((name, count))
+
+    ancestries.sort(
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    return ancestries
+
+
+def get_top_religions(row):
+    religion_cols = [
+        c for c in row.columns
+        if re.match(r"G14_\w*_P$", c)
+
+    ]
+
+
+
+    religions = []
+
+    for col in religion_cols:
+
+        count = pd.to_numeric(row[col], errors="coerce").sum()
+
+        if pd.notna(count) and count > 0:
+            name = re.sub(r"G14_", "", col)
+
+            name = (
+                name
+                .replace("_P", "")
+                .replace("_", " ")
+            )
+
+            religions.append((name, count))
+
+    religions.sort(
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    return religions
+
+
+def get_top_industries(row):
+    industry_cols = [
+        c for c in row.columns
+        if re.match(r"G54._P_\w*_Tot$", c)
+
+    ]
+
+    industries = []
+
+    for col in industry_cols:
+
+        count = pd.to_numeric(row[col], errors="coerce").sum()
+
+        if pd.notna(count) and count > 0:
+            name = re.sub(r"G54._P_", "", col)
+
+            name = (
+                name
+                .replace("_Tot", "")
+                .replace("_", " ")
+            )
+
+            industries.append((name, count))
+
+    industries.sort(
+        key=lambda x: x[1],
+        reverse=True
+    )
+
+    return industries
+
 
 def electorate_summary(
         sa1_divisions,
@@ -70,6 +199,7 @@ def electorate_summary(
     electorate_mesh = electorate_mesh.copy()
 
     electorate_mesh = calculate_extra_columns(electorate_mesh)
+
 
     '''
     print("electorate cols are")
@@ -162,6 +292,7 @@ def electorate_summary(
             )
         )
 
+
     print("\n===== COUNTS (SUMS) =====")
     print(
         sums_df.to_csv(
@@ -175,6 +306,27 @@ def electorate_summary(
             index=False
         )
     )
+
+    print("\n===== Nationalities Totals =====")
+    nationalities = get_top_nationalities(electorate_mesh)
+    for nationality, amount in nationalities:
+        print(nationality + ", " + str(amount))
+
+
+    print("\n===== Ancestry Totals =====")
+    ancestries = get_top_ancestries(electorate_mesh)
+    for ancestry, amount in ancestries:
+        print(ancestry + ", " + str(amount))
+
+    print("\n===== Religion Totals =====")
+    religions = get_top_religions(electorate_mesh)
+    for religion, amount in religions:
+        print(religion + ", " + str(amount))
+
+    print("\n===== Industry Totals =====")
+    industries = get_top_industries(electorate_mesh)
+    for industry, amount in industries:
+        print(industry + ", " + str(amount))
 
     return {
         "sums": sums_df,

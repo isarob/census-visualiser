@@ -28,6 +28,7 @@ def get_summary_fields(get_gcp_column):
         get_gcp_column("other_language_at_home"):
             "Other Language at Home",
 
+
         # Landlord type
         get_gcp_column("rent_via_real_estate_agent"):
             "Rentals via Real Estate Agent",
@@ -39,6 +40,7 @@ def get_summary_fields(get_gcp_column):
             "Community Housing Provider",
         get_gcp_column("total_rentals"):
             "Total Rentals",
+
 
         # Households
         get_gcp_column("total_households"):
