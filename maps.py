@@ -2,6 +2,8 @@
 # service markers, and spatial selection.
 
 import re
+import branca
+from branca.element import Element
 
 import contextily as ctx
 import folium
@@ -22,86 +24,55 @@ from spatial import (
     sa1_divisions_in_electorate,
 )
 
-
 def generate_html_map(
         sa1_divisions,
         sed,
         electorate,
-        colour_column=None,
+        colour_column=None,      # retained for backwards compatibility
         popup_fields=None,
         tooltip_fields=None,
+        heatmap_fields=None,
         services_df=None,
         tiles=CARTO_TILES,
-        cmap="viridis",
+        cmap="viridis",          # retained for backwards compatibility
         save_path=None
 ):
     """
     Generate an interactive Folium map of SA1 divisions
     within an electorate.
 
-    Optionally displays:
-        - SA1 data using a colour scale
-        - SA1 popup and tooltip informationA
-        - Electorate boundary
-        - OSM service markers
     """
 
-    # Determine the default output path if one was not provided.
-    # Determine the default output path if one was not provided.
+    # Determine output path.
     if save_path is None:
 
-        # Create the maps output directory if it does not exist.
         MAP_DIR.mkdir(
             parents=True,
             exist_ok=True,
         )
 
         if isinstance(electorate, str):
+
             save_path = (
                     MAP_DIR
                     / f"{electorate}_nswsocialists_data_{SA1_YEAR}.html"
             )
 
         elif len(electorate) == 1:
+
             save_path = (
                     MAP_DIR
                     / f"{electorate[0]}_nswsocialists_data_{SA1_YEAR}.html"
             )
 
         else:
+
             save_path = (
                     MAP_DIR
                     / f"multi_nswsocialists_data_{SA1_YEAR}.html"
             )
 
-    # Convert popup and tooltip field dictionaries into
-    # the format expected by GeoPandas.explore().
-    popup_columns = None
-    popup_kwds = {}
-
-    if popup_fields:
-        popup_columns = list(
-            popup_fields.keys()
-        )
-
-        popup_kwds["aliases"] = list(
-            popup_fields.values()
-        )
-
-    tooltip_columns = None
-    tooltip_kwds = {}
-
-    if tooltip_fields:
-        tooltip_columns = list(
-            tooltip_fields.keys()
-        )
-
-        tooltip_kwds["aliases"] = list(
-            tooltip_fields.values()
-        )
-
-    # Load the electorate boundary and SA1 divisions
-    # belonging to the selected electorate.
+    # Load electorate boundary.
     electorate_polygon = get_electorate(
         sed,
         electorate
@@ -110,6 +81,7 @@ def generate_html_map(
     if electorate_polygon.empty:
         return None
 
+    # Load SA1 divisions.
     electorate_mesh = sa1_divisions_in_electorate(
         sa1_divisions,
         electorate
@@ -118,29 +90,42 @@ def generate_html_map(
     if electorate_mesh.empty:
         return None
 
-    # Work on a copy so the original SA1 data is not modified.
     electorate_mesh = electorate_mesh.copy()
 
-    # Calculate additional fields used by the map.
     electorate_mesh = calculate_extra_columns(
         electorate_mesh
     )
 
-    # Folium/Leaflet expects WGS84 latitude/longitude.
-    # Use copies so the original GeoDataFrames aren't modified.
-    mesh_wgs84 = electorate_mesh.to_crs(epsg=4326)
-    polygon_wgs84 = electorate_polygon.to_crs(epsg=4326)
+    # Convert to WGS84 for Folium.
+    mesh_wgs84 = electorate_mesh.to_crs(
+        epsg=4326
+    )
 
-    # Compute map centre from mesh centroid (WGS84)
-    center = mesh_wgs84.geometry.union_all().centroid
+    polygon_wgs84 = electorate_polygon.to_crs(
+        epsg=4326
+    )
+
+    # Calculate map centre.
+    center = (
+        mesh_wgs84.geometry
+        .union_all()
+        .centroid
+    )
+
     center_lat = center.y
     center_lon = center.x
 
-    # Create the map without Folium's default basemap.
-    # The CARTO layer is added explicitly below.
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=11, tiles=None)
+    # Create map.
+    m = folium.Map(
+        location=[
+            center_lat,
+            center_lon
+        ],
+        zoom_start=11,
+        tiles=None
+    )
 
-    # Add the CARTO Voyager basemap.
+    # Add basemap.
     folium.TileLayer(
         tiles=tiles,
         attr=CARTO_ATTRIBUTION,
@@ -150,61 +135,297 @@ def generate_html_map(
         max_zoom=20,
     ).add_to(m)
 
-    # Configure how GeoPandas draws the SA1 divisions
-    # onto the existing Folium map.
-    explore_kwargs = {
-        "m": m,
-        "popup": popup_columns,
-        "tooltip": tooltip_columns,
-        "popup_kwds": popup_kwds,
-        "tooltip_kwds": tooltip_kwds,
-        "style_kwds": {
-            "color": "black",
-            "weight": 1,
-            "fillOpacity": 0.2,
-        },
-    }
-    # Add a colour scale when a data column was provided.
-    if colour_column is not None:
-        explore_kwargs.update({
-            "column": colour_column,
-            "cmap": cmap,
-            "scheme": "Quantiles",
-            "k": 5,
-            "legend": False,
-        })
+    # Build popup HTML.
+    if popup_fields:
 
-    # Draw the SA1 divisions.
-    m = electorate_mesh.explore(
-        **explore_kwargs
-    )
+        popup_html = []
 
-    # Draw the electorate boundary above the SA1 divisions.
-    polygon_wgs84.explore(
-        m=m,
-        style_kwds={
+        for _, row in mesh_wgs84.iterrows():
+
+            html = ""
+
+            for col, alias in popup_fields.items():
+
+                if col not in row.index:
+                    continue
+
+                value = row[col]
+
+                if pd.notna(value):
+
+                    html += (
+                        f"<b>{alias}:</b> "
+                        f"{value}<br>"
+                    )
+
+            popup_html.append(html)
+
+        mesh_wgs84["_popup_html"] = popup_html
+
+    tooltip_columns = None
+    tooltip_aliases = None
+
+    if tooltip_fields:
+
+        tooltip_columns = list(
+            tooltip_fields.keys()
+        )
+
+        tooltip_aliases = list(
+            tooltip_fields.values()
+        )
+
+    # ------------------------------------------------------------------
+    # Heatmap layers
+    # ------------------------------------------------------------------
+
+    legend_switches = ""
+
+    if heatmap_fields:
+
+        first_field = next(
+            iter(heatmap_fields.keys())
+        )
+        
+
+        for field, label in heatmap_fields.items():
+
+            if field not in mesh_wgs84.columns:
+                continue
+
+            mesh_wgs84[field] = pd.to_numeric(
+                mesh_wgs84[field],
+                errors="coerce"
+            )
+
+            valid_values = (
+                mesh_wgs84[field]
+                .dropna()
+            )
+
+            if valid_values.empty:
+                continue
+
+            vmin = valid_values.min()
+            vmax = valid_values.max()
+
+            if vmin == vmax:
+                vmax = vmin + 1
+
+            legend_name = (
+                    f"legend_{field}"
+                    .replace(" ", "_")
+                    .replace("%", "pct")
+            )
+
+            legend_html = f"""
+            <div id="{legend_name}"
+                 class="heatmap-legend"
+                 style="
+                     display:{'block' if field == first_field else 'none'};
+                     position: fixed;
+                     bottom: 50px;
+                     left: 50px;
+                     z-index: 9999;
+                     background-color: white;
+                     border: 2px solid grey;
+                     padding: 10px;
+                     font-size: 14px;
+                     min-width: 200px;
+                 ">
+                <b>{label}</b><br>
+                Min: {vmin:,.2f}<br>
+                Max: {vmax:,.2f}
+            </div>
+            """
+
+            colormap = (
+                branca.colormap.linear.YlOrRd_09
+                .scale(
+                    vmin,
+                    vmax
+                )
+            )
+
+            colormap.caption = label
+
+            layer = folium.FeatureGroup(
+                name=label,
+                overlay=True,
+                control=True,
+                show=(field == first_field)
+            )
+
+            def style_function(
+                    feature,
+                    field=field,
+                    colormap=colormap
+            ):
+
+                value = (
+                    feature["properties"]
+                    .get(field)
+                )
+
+                try:
+                    value = float(value)
+
+                    fill_color = colormap(
+                        value
+                    )
+
+                except (
+                        TypeError,
+                        ValueError
+                ):
+                    fill_color = "#d3d3d3"
+
+                return {
+                    "fillColor": fill_color,
+                    "fillOpacity": 0.6,
+                    "color": "black",
+                    "weight": 1,
+                }
+
+            geojson = folium.GeoJson(
+                mesh_wgs84,
+                name=label,
+                style_function=style_function,
+                highlight_function=lambda x: {
+                    "weight": 3,
+                    "fillOpacity": 0.8,
+                },
+            )
+
+            if popup_fields:
+
+                folium.GeoJsonPopup(
+                    fields=["_popup_html"],
+                    aliases=[""],
+                    labels=False,
+                    parse_html=True,
+                ).add_to(
+                    geojson
+                )
+
+            if tooltip_fields:
+
+                folium.GeoJsonTooltip(
+                    fields=tooltip_columns,
+                    aliases=tooltip_aliases,
+                    sticky=False,
+                ).add_to(
+                    geojson
+                )
+
+            geojson.add_to(
+                layer
+            )
+
+            m.get_root().html.add_child(
+                    folium.Element(legend_html)
+                    )
+
+            layer.add_to(
+                m
+            )
+
+            legend_name = (
+                f"legend_{field}"
+                .replace(" ", "_")
+                .replace("%", "pct")
+            )
+
+            legend_switches += f"""
+            if (e.name === "{label}") {{
+
+                document
+                    .querySelectorAll(".heatmap-legend")
+                    .forEach(
+                        el => el.style.display = "none"
+                    );
+
+                document
+                    .getElementById("{legend_name}")
+                    .style.display = "block";
+            }}
+            """
+
+    # ------------------------------------------------------------------
+    # Electorate boundary
+    # ------------------------------------------------------------------
+
+    folium.GeoJson(
+        polygon_wgs84,
+        name="Electorate Boundary",
+        style_function=lambda feature: {
             "color": "red",
             "weight": 3,
-            "fill": False,
+            "fillOpacity": 0,
         },
-        name="Electorate Boundary",
+    ).add_to(
+        m
     )
 
-    # Add OSM service markers when service data is available.
-    if services_df is not None and not services_df.empty:
-        # Categorise services, add display fields,
-        # and calculate marker coordinates.
-        services_df = prepare_services(services_df)
+    # ------------------------------------------------------------------
+    # Services
+    # ------------------------------------------------------------------
 
-        # Add the prepared services to the Folium map.
+    if (
+            services_df is not None
+            and not services_df.empty
+    ):
+
+        services_df = prepare_services(
+            services_df
+        )
+
         add_service_markers(
             services_df,
             m,
         )
 
-    # Save the generated map when an output path was supplied.
+    # ------------------------------------------------------------------
+    # Layer selector
+    # ------------------------------------------------------------------
+
+    folium.LayerControl(
+        collapsed=False
+    ).add_to(
+        m
+    )
+
+    map_name = m.get_name()
+
+    m.get_root().script.add_child(
+        Element(
+            f"""
+    setTimeout(function() {{
+
+        {map_name}.on(
+            'overlayadd',
+            function(e) {{
+
+                {legend_switches}
+
+            }}
+        );
+
+    }}, 1000);
+    """
+        )
+    )
+
+
+    # ------------------------------------------------------------------
+    # Save map
+    # ------------------------------------------------------------------
+
     if save_path:
-        m.save(save_path)
+
+        m.save(
+            str(save_path)
+        )
 
         print(
             f"Interactive map saved to: "
@@ -212,7 +433,6 @@ def generate_html_map(
         )
 
     return m
-
 
 def generate_heatmap(
         sa1_divisions,
@@ -378,4 +598,195 @@ def generate_heatmap(
         plt.show()
 
     plt.close(fig)
+    return None
+
+def generate_folium_heatmap(
+        sa1_divisions,
+        sed,
+        electorate,
+        highlight_field,
+        save_chart=False
+):
+    """
+    Generate an interactive Folium heatmap for an electorate.
+
+    highlight_field example:
+        {
+            "G02_Median_age_persons": "Median Age"
+        }
+    """
+
+    electorate_polygon = get_electorate(
+        sed,
+        electorate
+    )
+
+    if electorate_polygon.empty:
+        return None
+
+    electorate_mesh = sa1_divisions_in_electorate(
+        sa1_divisions,
+        electorate
+    )
+
+    if electorate_mesh.empty:
+        return None
+
+    electorate_mesh = electorate_mesh.copy()
+
+    electorate_mesh = calculate_extra_columns(
+        electorate_mesh
+    )
+
+    highlight_column = (
+        list(highlight_field.keys())[0]
+    )
+
+    display_name = (
+        list(highlight_field.values())[0]
+    )
+
+    if highlight_column not in electorate_mesh.columns:
+        raise ValueError(
+            f"Column '{highlight_column}' not found."
+        )
+
+    electorate_mesh[highlight_column] = pd.to_numeric(
+        electorate_mesh[highlight_column],
+        errors="coerce"
+    )
+
+    # Folium expects WGS84
+    electorate_mesh = electorate_mesh.to_crs(
+        epsg=4326
+    )
+
+    electorate_polygon = electorate_polygon.to_crs(
+        epsg=4326
+    )
+
+    bounds = electorate_polygon.total_bounds
+
+    center_lat = (
+        bounds[1] + bounds[3]
+    ) / 2
+
+    center_lon = (
+        bounds[0] + bounds[2]
+    ) / 2
+
+    m = folium.Map(
+        location=[center_lat, center_lon],
+        zoom_start=11,
+        tiles="CartoDB positron"
+    )
+
+    choropleth = folium.Choropleth(
+        geo_data=electorate_mesh,
+        data=electorate_mesh,
+        columns=[
+            electorate_mesh.index,
+            highlight_column
+        ],
+        key_on="feature.id",
+        fill_color="YlOrRd",
+        fill_opacity=0.7,
+        line_opacity=0.2,
+        nan_fill_color="lightgray",
+        legend_name=display_name,
+        highlight=True,
+    ).add_to(m)
+
+    tooltip_fields = [
+        highlight_column
+    ]
+
+    tooltip_aliases = [
+        display_name
+    ]
+
+    if "SA1_CODE21" in electorate_mesh.columns:
+        tooltip_fields.insert(
+            0,
+            "SA1_CODE21"
+        )
+
+        tooltip_aliases.insert(
+            0,
+            "SA1"
+        )
+
+    folium.GeoJson(
+        electorate_mesh,
+        style_function=lambda feature: {
+            "fillOpacity": 0,
+            "color": "transparent",
+            "weight": 0
+        },
+        tooltip=folium.GeoJsonTooltip(
+            fields=tooltip_fields,
+            aliases=tooltip_aliases,
+            localize=True,
+            sticky=False,
+        )
+    ).add_to(m)
+
+    folium.GeoJson(
+        electorate_polygon,
+        style_function=lambda feature: {
+            "fillColor": "none",
+            "color": "black",
+            "weight": 3,
+            "fillOpacity": 0
+        },
+        name="Electorate Boundary"
+    ).add_to(m)
+
+    m.fit_bounds([
+        [bounds[1], bounds[0]],
+        [bounds[3], bounds[2]]
+    ])
+
+    if save_chart:
+
+        safe_electorate = re.sub(
+            r"[^A-Za-z0-9]+",
+            "_",
+            str(electorate)
+        ).strip("_")
+
+        safe_field = re.sub(
+            r"[^A-Za-z0-9]+",
+            "_",
+            display_name
+        ).strip("_")
+
+        HEATMAP_DIR.mkdir(
+            parents=True,
+            exist_ok=True
+        )
+
+        filename = (
+            HEATMAP_DIR
+            / f"{safe_electorate}_{safe_field}_{SA1_YEAR}.html"
+        )
+
+        m.save(str(filename))
+
+        print(
+            f"Heatmap saved to: {filename}"
+        )
+
+    else:
+
+        tmp_file = Path(
+            tempfile.gettempdir()
+        ) / "heatmap.html"
+
+        m.save(str(tmp_file))
+
+        webbrowser.open(
+            f"file://{tmp_file}"
+        )
+
     return None

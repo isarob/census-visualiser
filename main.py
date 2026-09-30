@@ -12,7 +12,7 @@ from fields import (
     POPUP_FIELDS,
     TOOLTIP_FIELDS,
 )
-from maps import generate_heatmap, generate_html_map
+from maps import generate_heatmap, generate_html_map, generate_folium_heatmap
 from spatial import get_electorate
 
 if __name__ == "__main__":
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         # Generate heatmaps when enabled on config.py.
         if GENERATE_HEATMAPS:
             for col in HEATMAP_COLUMNS:
-                generate_heatmap(
+                generate_folium_heatmap(
                     sa1_divisions,
                     sed,
                     electorate,
@@ -92,6 +92,7 @@ if __name__ == "__main__":
         popup_fields=POPUP_FIELDS,
 
         tooltip_fields=TOOLTIP_FIELDS,
+        heatmap_fields=TOOLTIP_FIELDS,
 
         services_df=services_df
 
