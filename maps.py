@@ -96,7 +96,6 @@ def generate_html_map(
     print("Optimisation: ")
     print(len(mesh_wgs84.columns))
     print(f"original columns: {len(mesh_wgs84.columns)}")
-    print(mesh_wgs84.columns.tolist())
 
     needed_columns = (
     ["geometry"]
@@ -104,13 +103,11 @@ def generate_html_map(
     + list(popup_fields.keys())
     + list(tooltip_fields.keys())
 )
+    unique_list = list(dict.fromkeys(needed_columns)) 
 
-    unique_list = list(dict.fromkeys(needed_columns))
- 
     mesh_wgs84 = mesh_wgs84[unique_list]
-    print(mesh_wgs84.columns[mesh_wgs84.columns.duplicated()])
+
     print(f"trimmed columns: {len(mesh_wgs84.columns)}")
-    print(mesh_wgs84.columns.tolist())
     
     polygon_wgs84 = electorate_polygon.to_crs(
         epsg=4326
@@ -310,7 +307,8 @@ def generate_html_map(
                 folium.GeoJsonPopup(
                     fields=["_popup_html"],
                     aliases=[""],
-                    labels=False,
+                    labels=True,
+                    localize=True,
                     parse_html=True,
                 ).add_to(
                     geojson

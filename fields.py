@@ -125,17 +125,6 @@ def get_popup_fields(get_gcp_column):
 
         # Employment
         "employment_rate": "Employment Rate (%)",
-        "pct_managers": "Managers (%)",
-        "pct_professionals": "Professionals (%)",
-        "pct_technic_trades": "Technicians & Trades (%)",
-        "pct_community_personal_service":
-            "Community & Personal Service (%)",
-        "pct_clerical_admin": "Clerical & Administrative (%)",
-        "pct_sales": "Sales (%)",
-        "pct_machinery_drivers":
-            "Machinery Operators & Drivers (%)",
-        "pct_labourers": "Labourers (%)",
-        "pct_occ_not_stated": "Occupation Not Stated (%)",
     }
 
 def get_tooltip_fields(get_gcp_column):
@@ -143,7 +132,7 @@ def get_tooltip_fields(get_gcp_column):
         "Tot_P_P": "Population",
         get_gcp_column("total_households"):
             "Total Households",
-        get_gcp_column("median_age"):
+        get_gcp_column("median_age")    :
             "Median Age",
         get_gcp_column("median_personal_income"):
             "Median Personal Income ($/week)",

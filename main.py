@@ -182,10 +182,36 @@ if __name__ == "__main__":
                 sed,
                 electorate,
                 popup_fields=POPUP_FIELDS,
-
                 tooltip_fields=TOOLTIP_FIELDS,
                 heatmap_fields=TOOLTIP_FIELDS,
                 save_path=HEATMAP_DIR/f"{electorate}_summary_{SA1_YEAR}.html"
+                )
+
+            print("\n===== services heatmap =====")
+            electorate_gdf = get_electorate(
+                sed,
+                electorate
+            )
+
+            electorate_gdf = electorate_gdf.to_crs(
+                services.crs
+            )
+
+            services_df = gpd.clip(
+                services,
+                electorate_gdf
+                )
+
+            generate_html_map(
+                sa1_divisions,
+                sed,
+                electorate,
+                popup_fields=POPUP_FIELDS,
+
+                tooltip_fields=TOOLTIP_FIELDS,
+                heatmap_fields=TOOLTIP_FIELDS,
+                save_path=HEATMAP_DIR/f"{electorate}_services_{SA1_YEAR}.html",
+                services_df=services_df,
                 )
 
     # get the services for the electorates we're looking at
