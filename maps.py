@@ -428,7 +428,7 @@ def generate_html_map(
     # ------------------------------------------------------------------
 
     folium.LayerControl(
-        collapsed=False
+        collapsed=True
     ).add_to(
         m
     )
