@@ -28,21 +28,14 @@ def generate_html_map(
         sa1_divisions,
         sed,
         electorate,
-        colour_column=None,      # retained for backwards compatibility
         popup_fields=None,
         tooltip_fields=None,
         heatmap_fields=None,
         services_df=None,
         tiles=CARTO_TILES,
-        cmap="viridis",          # retained for backwards compatibility
+        cmap="viridis",          
         save_path=None
 ):
-    """
-    Generate an interactive Folium map of SA1 divisions
-    within an electorate.
-
-    """
-
     # Determine output path.
     if save_path is None:
 
@@ -100,7 +93,25 @@ def generate_html_map(
     mesh_wgs84 = electorate_mesh.to_crs(
         epsg=4326
     )
+    print("Optimisation: ")
+    print(len(mesh_wgs84.columns))
+    print(f"original columns: {len(mesh_wgs84.columns)}")
+    print(mesh_wgs84.columns.tolist())
 
+    needed_columns = (
+    ["geometry"]
+    + list(heatmap_fields.keys())
+    + list(popup_fields.keys())
+    + list(tooltip_fields.keys())
+)
+
+    unique_list = list(dict.fromkeys(needed_columns))
+ 
+    mesh_wgs84 = mesh_wgs84[unique_list]
+    print(mesh_wgs84.columns[mesh_wgs84.columns.duplicated()])
+    print(f"trimmed columns: {len(mesh_wgs84.columns)}")
+    print(mesh_wgs84.columns.tolist())
+    
     polygon_wgs84 = electorate_polygon.to_crs(
         epsg=4326
     )
@@ -162,18 +173,8 @@ def generate_html_map(
 
         mesh_wgs84["_popup_html"] = popup_html
 
-    tooltip_columns = None
-    tooltip_aliases = None
 
-    if tooltip_fields:
 
-        tooltip_columns = list(
-            tooltip_fields.keys()
-        )
-
-        tooltip_aliases = list(
-            tooltip_fields.values()
-        )
 
     # ------------------------------------------------------------------
     # Heatmap layers
@@ -187,9 +188,11 @@ def generate_html_map(
             iter(heatmap_fields.keys())
         )
         
-
+        total = 0
         for field, label in heatmap_fields.items():
 
+            total += 1
+            print(f"processing {label} layer [{total} / {len(heatmap_fields)}]")
             if field not in mesh_wgs84.columns:
                 continue
 
@@ -259,19 +262,23 @@ def generate_html_map(
             def style_function(
                     feature,
                     field=field,
-                    colormap=colormap
+                    colormap=colormap,
+                    vmin=vmin,
+                    vmax=vmax
             ):
 
-                value = (
-                    feature["properties"]
-                    .get(field)
-                )
+                value = feature["properties"].get(field)
 
                 try:
                     value = float(value)
 
-                    fill_color = colormap(
-                        value
+                    fill_color = colormap(value)
+
+                    alpha = (value - vmin) / (vmax - vmin)
+
+                    alpha = max(
+                        0.1,
+                        min(alpha, 1.0)
                     )
 
                 except (
@@ -279,10 +286,11 @@ def generate_html_map(
                         ValueError
                 ):
                     fill_color = "#d3d3d3"
+                    alpha = 0.1
 
                 return {
                     "fillColor": fill_color,
-                    "fillOpacity": 0.6,
+                    "fillOpacity": alpha,
                     "color": "black",
                     "weight": 1,
                 }
@@ -310,13 +318,45 @@ def generate_html_map(
 
             if tooltip_fields:
 
+                for feature in geojson.data["features"]:
+
+                    properties = feature["properties"]
+
+                    tooltip_html = """
+                    <b>Demographics</b><br>
+                    """
+
+                    for column, alias in tooltip_fields.items():
+
+                        tooltip_html += (
+                                f"{alias}: {properties.get(column, '')}<br>"
+                                )
+
+                    tooltip_html += """
+                    <br>
+                    <b>Heatmap</b><br>
+                    """
+
+                    for column, alias in heatmap_fields.items():
+                        if column in tooltip_fields.keys():
+                            continue
+
+                        tooltip_html += (
+                                f"{alias}: {properties.get(column, '')}<br>"
+                                )
+                    feature["properties"]["tooltip_html"] = tooltip_html
+
                 folium.GeoJsonTooltip(
-                    fields=tooltip_columns,
-                    aliases=tooltip_aliases,
-                    sticky=False,
-                ).add_to(
-                    geojson
-                )
+                        fields=["tooltip_html"],
+                        aliases=[""],
+                        labels=False,
+                        localize=False,
+                        sticky=False,
+                        ).add_to(
+                                geojson
+                                )
+
+                #iterate tooltip_columns and tooltip_aliases to populate this
 
             geojson.add_to(
                 layer
@@ -370,12 +410,12 @@ def generate_html_map(
     # ------------------------------------------------------------------
     # Services
     # ------------------------------------------------------------------
-
     if (
             services_df is not None
             and not services_df.empty
     ):
 
+        print("adding services")
         services_df = prepare_services(
             services_df
         )
@@ -420,7 +460,7 @@ def generate_html_map(
     # ------------------------------------------------------------------
     # Save map
     # ------------------------------------------------------------------
-
+    print("saving map")
     if save_path:
 
         m.save(

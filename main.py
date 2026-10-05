@@ -4,7 +4,7 @@ import geopandas as gpd
 import pandas as pd
 
 from calculations import electorate_summary
-from config import ELECTORATES, GENERATE_HEATMAPS
+from config import ELECTORATES, GENERATE_HEATMAPS, MAP_DIR, HEATMAP_DIR, SA1_YEAR
 from data_loader import load_cached_datasets
 from fields import (
     SUMMARY_FIELDS,
@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     # uncomment this to list all electorate names
     # list_electorate_names(sed)
-
+    
     for electorate in ELECTORATES:
 
         # Generate and print the electorate summary.
@@ -46,9 +46,35 @@ if __name__ == "__main__":
             electorate,
             SUMMARY_FIELDS,
         )
+        
+        print("\n===== Summary =====")
+        print(summary["sums"].to_csv(index=False))
+
+        print("\n===== Language Totals =====")
+        for language, amount in summary["languages"]:
+            print(language + ", " + str(amount))
+
+        print("\n===== Nationality Totals =====")
+        for nationality, amount in summary["nationalities"]:
+            print(nationality + ", " + str(amount))
+
+        print("\n===== Ancestry Totals =====")
+        for ancestry, amount in summary["ancestries"]:
+            print(ancestry + ", " + str(amount))
+
+        print("\n===== Religion Totals =====")
+        for religion, amount in summary["religions"]:
+            print(religion + ", " + str(amount))
+
+        print("\n===== Industry Totals =====")
+        for industry, amount in summary["industries"]:
+            print(industry + ", " + str(amount))
+
 
         # Generate heatmaps when enabled on config.py.
         if GENERATE_HEATMAPS:
+            '''
+            save as images
             for col in HEATMAP_COLUMNS:
                 generate_folium_heatmap(
                     sa1_divisions,
@@ -56,6 +82,110 @@ if __name__ == "__main__":
                     electorate,
                     highlight_field=col,
                     save_chart=True,
+                )
+            '''
+
+            #new heatmap method
+            print("\n===== Languages heatmap =====")
+            heatmap_fields = {}
+            for col, label in summary["languages"][:8]:
+                if("Tot_Tot" in col):
+                    continue
+                heatmap_fields[col] = label
+
+            generate_html_map(
+                sa1_divisions,
+                sed,
+                electorate,
+                popup_fields=POPUP_FIELDS,
+
+                tooltip_fields=TOOLTIP_FIELDS,
+                heatmap_fields=heatmap_fields,
+                save_path=HEATMAP_DIR/f"{electorate}_languages_{SA1_YEAR}.html"
+                )
+
+            heatmap_fields = {}
+            print("\n===== Nationalities heatmap =====")
+            for col, label in summary["nationalities"][:8]:
+                if("Tot_Tot" in col):
+                    continue
+                heatmap_fields[col] = label
+
+            generate_html_map(
+                sa1_divisions,
+                sed,
+                electorate,
+                popup_fields=POPUP_FIELDS,
+
+                tooltip_fields=TOOLTIP_FIELDS,
+                heatmap_fields=heatmap_fields,
+                save_path=HEATMAP_DIR/f"{electorate}_nationalities_{SA1_YEAR}.html"
+                )
+
+
+            heatmap_fields = {}
+            print("\n===== Ancestries heatmap =====")
+            for col, label in summary["ancestries"][:8]:
+                if("Tot_Tot" in col):
+                    continue
+                heatmap_fields[col] = label
+
+            generate_html_map(
+                sa1_divisions,
+                sed,
+                electorate,
+                popup_fields=POPUP_FIELDS,
+
+                tooltip_fields=TOOLTIP_FIELDS,
+                heatmap_fields=heatmap_fields,
+                save_path=HEATMAP_DIR/f"{electorate}_ancestries_{SA1_YEAR}.html"
+                )
+
+            heatmap_fields = {}
+            print("\n===== religions heatmap =====")
+            for col, label in summary["religions"][:8]:
+                if("Tot_P" in col):
+                    continue
+                heatmap_fields[col] = label
+
+            generate_html_map(
+                sa1_divisions,
+                sed,
+                electorate,
+                popup_fields=POPUP_FIELDS,
+
+                tooltip_fields=TOOLTIP_FIELDS,
+                heatmap_fields=heatmap_fields,
+                save_path=HEATMAP_DIR/f"{electorate}_religions_{SA1_YEAR}.html"
+                )
+
+            heatmap_fields = {}
+            print("\n===== industries heatmap =====")
+            for col, label in summary["industries"][:8]:
+                if "Tot_Tot" in col or "ID_NS" in col:
+                    continue
+                heatmap_fields[col] = label
+
+            generate_html_map(
+                sa1_divisions,
+                sed,
+                electorate,
+                popup_fields=POPUP_FIELDS,
+
+                tooltip_fields=TOOLTIP_FIELDS,
+                heatmap_fields=heatmap_fields,
+                save_path=HEATMAP_DIR/f"{electorate}_industries_{SA1_YEAR}.html"
+                )
+
+            generate_html_map(
+                sa1_divisions,
+                sed,
+                electorate,
+                popup_fields=POPUP_FIELDS,
+
+                tooltip_fields=TOOLTIP_FIELDS,
+                heatmap_fields=TOOLTIP_FIELDS,
+                save_path=HEATMAP_DIR/f"{electorate}_summary_{SA1_YEAR}.html"
                 )
 
     # get the services for the electorates we're looking at
@@ -88,7 +218,6 @@ if __name__ == "__main__":
         sa1_divisions,
         sed,
         ELECTORATES,
-        colour_column='Feasibility',
         popup_fields=POPUP_FIELDS,
 
         tooltip_fields=TOOLTIP_FIELDS,

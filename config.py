@@ -14,7 +14,7 @@ HEATMAP_DIR = OUTPUT_DIR / "heatmaps"
 MAP_DIR = OUTPUT_DIR / "maps"
 
 # Toggle heatmap generation.
-GENERATE_HEATMAPS = False
+GENERATE_HEATMAPS = True
 
 SA1_YEAR = 2021
 CARTO_API_KEY = "cb1_296x_1_e8d7efe65c17bb102d553727"
@@ -42,15 +42,15 @@ CARTO_ATTRIBUTION = "© OpenStreetMap contributors, © CARTO"
 
 ELECTORATES = [
     "Auburn",
-]
-
-'''
-
     "Granville",
     "Summer Hill",
     "Newtown",
     "Wollongong",
     "Wallsend",
+]
+
+'''
+
 '''
 
 POI_FILTER = {

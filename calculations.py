@@ -9,10 +9,37 @@ from spatial import (
     sa1_divisions_in_electorate,
 )
 
+def get_top(df, match, split, n=5):
+    cols = [
+        c for c in df.columns
+        if re.match(match, c)
 
-def get_top_languages(row, n=5):
+    ]
+
+    matches = []
+
+    for col in cols:
+
+        count = pd.to_numeric(df[col], errors="coerce").sum()
+
+        if pd.notna(count) and count > 0:
+            name = split(col)
+            matches.append((col, f"{name}", count))
+
+    matches.sort(
+        key=lambda x: x[2],
+        reverse=True
+    )
+
+    outs = []
+    for col, name, count in matches:
+        outs.append((col, f"{name} ({count})"))
+
+    return outs
+
+def get_top_languages_tooltip(df, n=5):
     language_cols = [
-        c for c in row.index
+        c for c in df.index
         if re.match(r"G13._POL_(?!Tot)[^_\W]*_Tot$", c)
 
     ]
@@ -21,7 +48,7 @@ def get_top_languages(row, n=5):
 
     for col in language_cols:
 
-        count = pd.to_numeric(row[col], errors="coerce")
+        count = pd.to_numeric(df[col], errors="coerce")
 
         if pd.notna(count) and count > 0:
             name = re.sub(r"G13._POL_", "", col)
@@ -44,134 +71,68 @@ def get_top_languages(row, n=5):
         for lang, count in langs[:n]
     )
 
-def get_top_nationalities(row):
-    nationality_cols = [
-        c for c in row.columns
-        if re.match(r"G09._P_[^_\W]*_Tot$", c)
+def get_top_languages(df):
+    return get_top(
+        df,
+        r"G13._POL_(?!Tot)[^_\W]*_Tot$",
+        lambda col: (
+            re.sub(r"G13._POL_", "", col)
+            .replace("_Tot", "")
+            .replace("_", " ")
+        )
+    )
+    
 
-    ]
-
-
-    nationalities = []
-
-    for col in nationality_cols:
-
-        count = pd.to_numeric(row[col], errors="coerce").sum()
-
-        if pd.notna(count) and count > 0:
-            name = re.sub(r"G09._P_", "", col)
+def get_top_nationalities(df):
+    def format_nationalities(col_name):
+            name = re.sub(r"G09._P_", "", col_name)
 
             name = (
                 name
                 .replace("_Tot", "")
                 .replace("_", " ")
             )
-
-            nationalities.append((name, count))
-
-    nationalities.sort(
-        key=lambda x: x[1],
-        reverse=True
-    )
-
+            return name
+    nationalities = get_top(df, r"G09._P_[^_\W]*_Tot$", format_nationalities)
     return nationalities
 
-def get_top_ancestries(row):
-    ancestry_cols = [
-        c for c in row.columns
-        if re.match(r"G08_[^_\W]*_Tot_resp$", c)
-
-    ]
-
-    ancestries = []
-
-    for col in ancestry_cols:
-
-        count = pd.to_numeric(row[col], errors="coerce").sum()
-
-        if pd.notna(count) and count > 0:
-            name = re.sub(r"G08_", "", col)
-
-            name = (
-                name
-                .replace("_Tot_resp", "")
-                .replace("_", " ")
-            )
-
-            ancestries.append((name, count))
-
-    ancestries.sort(
-        key=lambda x: x[1],
-        reverse=True
+def get_top_ancestries(df):
+    return get_top(
+        df,
+        r"G08_[^_\W]*_Tot_resp$",
+        lambda col: (
+            col
+            .replace("G08_", "")
+            .replace("_Tot_resp", "")
+            .replace("_", " ")
+        )
     )
 
-    return ancestries
 
-
-def get_top_religions(row):
-    religion_cols = [
-        c for c in row.columns
-        if re.match(r"G14_\w*_P$", c)
-
-    ]
-
-
-
-    religions = []
-
-    for col in religion_cols:
-
-        count = pd.to_numeric(row[col], errors="coerce").sum()
-
-        if pd.notna(count) and count > 0:
-            name = re.sub(r"G14_", "", col)
-
-            name = (
-                name
-                .replace("_P", "")
-                .replace("_", " ")
-            )
-
-            religions.append((name, count))
-
-    religions.sort(
-        key=lambda x: x[1],
-        reverse=True
+def get_top_religions(df):
+    return get_top(
+        df,
+        r"G14_\w*_P$",
+        lambda col: (
+            col
+            .replace("G14_", "")
+            [:-2]
+            .replace("_", " ")
+        )
     )
 
-    return religions
 
-
-def get_top_industries(row):
-    industry_cols = [
-        c for c in row.columns
-        if re.match(r"G54._P_\w*_Tot$", c)
-
-    ]
-
-    industries = []
-
-    for col in industry_cols:
-
-        count = pd.to_numeric(row[col], errors="coerce").sum()
-
-        if pd.notna(count) and count > 0:
-            name = re.sub(r"G54._P_", "", col)
-
-            name = (
-                name
-                .replace("_Tot", "")
-                .replace("_", " ")
-            )
-
-            industries.append((name, count))
-
-    industries.sort(
-        key=lambda x: x[1],
-        reverse=True
+def get_top_industries(df):
+    return get_top(
+        df,
+        r"G54._P_\w*_Tot$",
+        lambda col: (
+            re.sub(r"G54._P_", "", col)
+            .replace("_Tot", "")
+            .replace("_", " ")
+        )
     )
 
-    return industries
 
 
 def electorate_summary(
@@ -207,9 +168,7 @@ def electorate_summary(
         print(col)
     '''
 
-    # -------------------------
     # SUMS
-    # -------------------------
 
     sum_rows = []
 
@@ -250,87 +209,22 @@ def electorate_summary(
 
     sums_df = pd.DataFrame(sum_rows)
 
-    # -------------------------
     # FOREIGN LANGUAGE TOTALS
-    # -------------------------
 
-    language_rows = []
-
-    for col in electorate_mesh.columns:
-
-        if "_POL_" not in col:
-            continue
-
-        if not col.endswith("_Tot"):
-            continue
-
-        if "UOLSE" in col:
-            continue
-
-        values = pd.to_numeric(
-            electorate_mesh[col],
-            errors="coerce"
-        )
-
-        if not values.notna().any():
-            continue
-
-        language_name = col
-
-        language_name = language_name.split("_POL_", 1)[1]
-        language_name = language_name[:-4]  # remove _Tot
-
-        language_rows.append({
-            "language": language_name,
-            "total": values.sum()
-        })
-        language_df = (
-            pd.DataFrame(language_rows)
-            .sort_values(
-                "total",
-                ascending=False
-            )
-        )
-
-
-    print("\n===== COUNTS (SUMS) =====")
-    print(
-        sums_df.to_csv(
-            index=False
-        )
-    )
-
-    print("\n===== FOREIGN LANGUAGE TOTALS =====")
-    print(
-        language_df.to_csv(
-            index=False
-        )
-    )
-
-    print("\n===== Nationalities Totals =====")
-    nationalities = get_top_nationalities(electorate_mesh)
-    for nationality, amount in nationalities:
-        print(nationality + ", " + str(amount))
-
-
-    print("\n===== Ancestry Totals =====")
+    languages = get_top_languages(electorate_mesh)
     ancestries = get_top_ancestries(electorate_mesh)
-    for ancestry, amount in ancestries:
-        print(ancestry + ", " + str(amount))
-
-    print("\n===== Religion Totals =====")
     religions = get_top_religions(electorate_mesh)
-    for religion, amount in religions:
-        print(religion + ", " + str(amount))
-
-    print("\n===== Industry Totals =====")
     industries = get_top_industries(electorate_mesh)
-    for industry, amount in industries:
-        print(industry + ", " + str(amount))
+    nationalities = get_top_nationalities(electorate_mesh)
+
 
     return {
         "sums": sums_df,
-        "languages": language_df
+        "languages": languages,
+        "ancestries": ancestries,
+        "religions": religions,
+        "industries": industries,
+        "nationalities":nationalities,
     }
 
 
@@ -436,7 +330,7 @@ def calculate_extra_columns(sa1_dataframe):
 
     sa1_dataframe["Top Languages"] = (
         sa1_dataframe.apply(
-            get_top_languages,
+            get_top_languages_tooltip,
             axis=1
         )
     )
