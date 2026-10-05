@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Electorate Mapper</title>
+
+    <style>
+        select {
+            font-size: 16px;
+            padding: 5px;
+            margin: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h3>
+    <title>Electorate Mapper</title>
+
+    <label for="electorate">Electorate:</label>
+    <select id="electorate">
+        <option value="Auburn">Auburn</option>
+        <option value="Granville">Granville</option>
+        <option value="Newtown">Newtown</option>
+        <option value="Summer Hill">Summer Hill</option>
+        <option value="Wallsend">Wallsend</option>
+        <option value="Wollongong">Wollongong</option>
+    </select>
+
+    <label for="type">Type:</label>
+    <select id="type">
+        <option value="summary">Summary</option>
+        <option value="languages">Languages</option>
+        <option value="ancestries">Ancestries</option>
+        <option value="nationalities">Nationalities</option>
+        <option value="religions">Religions</option>
+        <option value="industries">Industries</option>
+    </select>
+</h3>
+
+<iframe
+    name="mapframe"
+    id="mapframe"
+    width="100%"
+    height="800"
+    style="border:none;"
+></iframe>
+
+<script>
+    const electorate = document.getElementById("electorate");
+    const type = document.getElementById("type");
+    const mapframe = document.getElementById("mapframe");
+
+    function loadMap() {
+        mapframe.src =
+            "output/heatmaps/" + electorate.value + "_" +
+            type.value + "_2021.html";
+    }
+
+    electorate.addEventListener("change", loadMap);
+    type.addEventListener("change", loadMap);
+
+    loadMap();
+</script>
+
+</body>
+</html>
