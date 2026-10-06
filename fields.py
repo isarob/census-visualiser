@@ -330,6 +330,7 @@ def get_gcp_table_id(table_name=None, suffix=None):
         }
 
         if len(base_ids) != 1:
+            print(f"\nLoading table: {base_ids.pop()}")
             raise ValueError(
                 f"Could not determine a common base ID for "
                 f"GCP table '{table_name}': "

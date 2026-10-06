@@ -36,7 +36,6 @@
 <h3>
     <title>Electorate Mapper</title>
 
-    <label for="electorate">Electorate:</label>
     <select id="electorate">
         <option value="Auburn">Auburn</option>
         <option value="Granville">Granville</option>
@@ -46,7 +45,6 @@
         <option value="Wollongong">Wollongong</option>
     </select>
 
-    <label for="type">Type:</label>
     <select id="type">
         <option value="summary">Summary</option>
         <option value="services">Services</option>
@@ -66,10 +64,29 @@
     style="border:none;"
 ></iframe>
 
+<iframe
+    name="tableframe"
+    id="tableframe"
+    width="100%"
+    height="800"
+    style="border:none;"
+></iframe>
+
+<iframe
+    name="tableframe1"
+    id="tableframe1"
+    width="100%"
+    height="800"
+    style="border:none;"
+></iframe>
+
 <script>
     const electorate = document.getElementById("electorate");
     const type = document.getElementById("type");
     const mapframe = document.getElementById("mapframe");
+    const tableframe = document.getElementById("tableframe");
+    const tableframe1 = document.getElementById("tableframe1");
+
 
     function loadMap() {
         mapframe.src =
@@ -77,10 +94,73 @@
             type.value + "_2021.html";
     }
 
-    electorate.addEventListener("change", loadMap);
-    type.addEventListener("change", loadMap);
+    electorate.addEventListener("change", () => {
+        loadMap();
+        loadSummaryTables();
+    });
+
+    type.addEventListener("change", () => {
+        loadMap();
+        loadSummaryTables();
+    });
 
     loadMap();
+    loadSummaryTables();
+
+    function loadSummaryTables() {
+
+        if (type.value === "summary") {
+            loadTable("summary", tableframe);
+            loadTable("none", tableframe1);
+
+        }
+
+        if (type.value === "services") {
+            loadTable("summary", tableframe);
+            loadTable("none", tableframe1);
+
+        }
+
+        if (type.value === "languages") {
+            loadTable("languages", tableframe);
+            loadTable("language_proficiency", tableframe1);
+        }
+
+        if (type.value === "ancestries") {
+            loadTable("ancestries", tableframe);
+            loadTable("summary", tableframe1);
+
+        }
+
+        if (type.value === "nationalities") {
+            loadTable("nationalities", tableframe);
+            loadTable("summary", tableframe1);
+
+        }
+
+        if (type.value === "religions") {
+            loadTable("religions", tableframe);
+            loadTable("summary", tableframe1);
+
+        }
+
+        if (type.value === "industries") {
+            loadTable("industries", tableframe);
+            loadTable("summary", tableframe1);
+
+        }
+    }
+
+       function loadTable(name, table) {
+        if (name === "none"){
+            table.src = "";
+            return;
+        }
+        table.src =
+            "output/heatmaps/" + electorate.value +
+            "_" + name + "_table_2021.html";
+    }
+    
 </script>
 
 </body>

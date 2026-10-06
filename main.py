@@ -54,6 +54,10 @@ if __name__ == "__main__":
         for language, amount in summary["languages"]:
             print(language + ", " + str(amount))
 
+
+        print("\n===== Language Proficiency =====")
+        print(summary["language_proficiency"].to_string(index=False))
+
         print("\n===== Nationality Totals =====")
         for nationality, amount in summary["nationalities"]:
             print(nationality + ", " + str(amount))
@@ -69,6 +73,59 @@ if __name__ == "__main__":
         print("\n===== Industry Totals =====")
         for industry, amount in summary["industries"]:
             print(industry + ", " + str(amount))
+
+
+        # generate tables
+
+        summary["sums"].to_html(
+            HEATMAP_DIR / f"{electorate}_summary_table_2021.html",
+            index=False
+        )
+
+        pd.DataFrame(
+            summary["languages"],
+            columns=["language", "amount"]
+        ).to_html(
+            HEATMAP_DIR / f"{electorate}_languages_table_2021.html",
+            index=False
+        )
+
+        summary["language_proficiency"].to_html(
+            HEATMAP_DIR / f"{electorate}_language_proficiency_table_2021.html",
+            index=False
+        )
+
+        pd.DataFrame(
+            summary["nationalities"],
+            columns=["nationality", "amount"]
+        ).to_html(
+            HEATMAP_DIR / f"{electorate}_nationalities_table_2021.html",
+            index=False
+        )
+
+        pd.DataFrame(
+            summary["ancestries"],
+            columns=["ancestry", "amount"]
+        ).to_html(
+            HEATMAP_DIR / f"{electorate}_ancestries_table_2021.html",
+            index=False
+        )
+
+        pd.DataFrame(
+            summary["religions"],
+            columns=["religion", "amount"]
+        ).to_html(
+            HEATMAP_DIR / f"{electorate}_religions_table_2021.html",
+            index=False
+        )
+
+        pd.DataFrame(
+            summary["industries"],
+            columns=["industry", "amount"]
+        ).to_html(
+            HEATMAP_DIR / f"{electorate}_industries_table_2021.html",
+            index=False
+        )
 
 
         # Generate heatmaps when enabled on config.py.
@@ -88,8 +145,9 @@ if __name__ == "__main__":
             #new heatmap method
             print("\n===== Languages heatmap =====")
             heatmap_fields = {}
-            for col, label in summary["languages"][:8]:
-                if("Tot_Tot" in col):
+            for col, label in summary["languages"][:20]:
+                if("Tot_Tot" in col) or "UOLSE" in col or "Oth" in col:
+                    print(f"\ndiscarding {col}")
                     continue
                 heatmap_fields[col] = label
 

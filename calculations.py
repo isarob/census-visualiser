@@ -40,7 +40,7 @@ def get_top(df, match, split, n=5):
 def get_top_languages_tooltip(df, n=5):
     language_cols = [
         c for c in df.index
-        if re.match(r"G13._POL_(?!Tot)[^_\W]*_Tot$", c)
+        if re.match(r"G13._POL_(?!Tot$).+_Tot$", c)
 
     ]
 
@@ -74,7 +74,19 @@ def get_top_languages_tooltip(df, n=5):
 def get_top_languages(df):
     return get_top(
         df,
-        r"G13._POL_(?!Tot)[^_\W]*_Tot$",
+        r"G13._POL_(?!Tot$).+_Tot$",
+        lambda col: (
+            re.sub(r"G13._POL_", "", col)
+            .replace("_Tot", "")
+            .replace("_", " ")
+        )
+    )
+
+
+def get_languages(df):
+    return get_top(
+        df,
+        r"G13._POL_(?!Tot$).",
         lambda col: (
             re.sub(r"G13._POL_", "", col)
             .replace("_Tot", "")
@@ -93,13 +105,13 @@ def get_top_nationalities(df):
                 .replace("_", " ")
             )
             return name
-    nationalities = get_top(df, r"G09._P_[^_\W]*_Tot$", format_nationalities)
+    nationalities = get_top(df, r"G09._P_.+_Tot$", format_nationalities)
     return nationalities
 
 def get_top_ancestries(df):
     return get_top(
         df,
-        r"G08_[^_\W]*_Tot_resp$",
+        r"G08_[A-Za-z0-9_]+_Tot_resp$",
         lambda col: (
             col
             .replace("G08_", "")
@@ -134,6 +146,57 @@ def get_top_industries(df):
     )
 
 
+def get_language_proficiency(df):
+
+    top_languages = get_languages(df)
+
+    rows = []
+
+    for language_col, language_total in top_languages:
+
+        match = re.match(
+            r"G13(.)_POL_(.+)_Tot$",
+            language_col
+        )
+
+        if not match:
+            continue
+
+        if "UOLSE" in language_col:
+            continue
+
+        language = match.group(2)
+        print(language)
+
+        vw_col = f"G13{match.group(1)}_POL_{language}_UOLSE_VWorW"
+        nw_col = f"G13{match.group(1)}_POL_{language}_UOLSE_NWorNAA"
+        print(f"{vw_col}, {nw_col}") 
+
+        vw = pd.to_numeric(
+            df.get(vw_col, 0),
+            errors="coerce"
+        )
+
+        nw = pd.to_numeric(
+            df.get(nw_col, 0),
+            errors="coerce"
+        )
+        print(f"{vw}, {nw}")
+
+        vw = vw.fillna(0).sum() if hasattr(vw, "fillna") else vw
+        nw = nw.fillna(0).sum() if hasattr(nw, "fillna") else nw
+
+        english_total = vw + nw
+
+        if english_total > 0:
+            rows.append({
+                "language": language.replace("_", " "),
+                "very_well_or_well": vw,
+                "not_well_or_not_at_all": nw,
+                "pct_not_well": nw / english_total * 100
+            })
+
+    return pd.DataFrame(rows)
 
 def electorate_summary(
         sa1_divisions,
@@ -212,21 +275,21 @@ def electorate_summary(
     # FOREIGN LANGUAGE TOTALS
 
     languages = get_top_languages(electorate_mesh)
+    language_proficiency = get_language_proficiency(electorate_mesh)
     ancestries = get_top_ancestries(electorate_mesh)
     religions = get_top_religions(electorate_mesh)
     industries = get_top_industries(electorate_mesh)
     nationalities = get_top_nationalities(electorate_mesh)
 
-
     return {
         "sums": sums_df,
         "languages": languages,
+        "language_proficiency": language_proficiency,
         "ancestries": ancestries,
         "religions": religions,
         "industries": industries,
-        "nationalities":nationalities,
+        "nationalities": nationalities,
     }
-
 
 def calculate_extra_columns(sa1_dataframe):
     numeric_cols = [
