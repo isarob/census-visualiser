@@ -191,8 +191,8 @@ def get_language_proficiency(df):
         if english_total > 0:
             rows.append({
                 "language": language.replace("_", " "),
-                "very_well_or_well": vw,
-                "not_well_or_not_at_all": nw,
+                "decent": vw,
+                "not_well": nw,
                 "pct_not_well": nw / english_total * 100
             })
 
