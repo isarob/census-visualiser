@@ -4,6 +4,9 @@
 import re
 import branca
 from branca.element import Element
+import heapq
+import numpy as np
+import copy
 
 import contextily as ctx
 import folium
@@ -93,8 +96,6 @@ def generate_html_map(
     mesh_wgs84 = electorate_mesh.to_crs(
         epsg=4326
     )
-    print("Optimisation: ")
-    print(len(mesh_wgs84.columns))
     print(f"original columns: {len(mesh_wgs84.columns)}")
 
     needed_columns = (
@@ -146,6 +147,14 @@ def generate_html_map(
     # Build popup HTML.
     if popup_fields:
 
+        popup_fields = copy.copy(popup_fields)
+        for column, alias in heatmap_fields.items():
+            if column in popup_fields.keys():
+                continue
+
+            popup_fields[column] = alias
+
+
         popup_html = []
 
         for _, row in mesh_wgs84.iterrows():
@@ -179,11 +188,34 @@ def generate_html_map(
 
     legend_switches = ""
 
+    population_field = "Tot_P_P"
+
+    #calculate percentages for heatmap
+    for field, label in heatmap_fields.items():
+
+        relative_field = f"{field}_pct"
+
+        mesh_wgs84[relative_field] = (
+            pd.to_numeric(
+                mesh_wgs84[field],
+                errors="coerce"
+            )
+            /
+            pd.to_numeric(
+                mesh_wgs84[population_field],
+                errors="coerce"
+            )
+            * 100
+        )
+
+    non_percent_fields = ["Tot_P_P", "G41_Total_Total", "G02_Median_age_persons", "G02_Median_tot_prsnl_inc_weekly", "Pct_Renting", "G02_Median_rent_weekly", "Pct_Apartments", "Top Languages"]
+    first_layer = None
     if heatmap_fields:
 
         first_field = next(
             iter(heatmap_fields.keys())
         )
+
         
         total = 0
         for field, label in heatmap_fields.items():
@@ -193,21 +225,45 @@ def generate_html_map(
             if field not in mesh_wgs84.columns:
                 continue
 
+            field_name = field
+
+
+            if field not in non_percent_fields:
+
+                heatmap_value = (
+                    pd.to_numeric(
+                        mesh_wgs84[field],
+                        errors="coerce"
+                    )
+                    /
+                    np.sqrt(
+                        pd.to_numeric(
+                            mesh_wgs84["Tot_P_P"],
+                            errors="coerce"
+                        )
+                    )
+                )
+                mesh_wgs84[f"{field}_pct"] = heatmap_value
+                field_name = f"{field}_pct"
+            
             mesh_wgs84[field] = pd.to_numeric(
-                mesh_wgs84[field],
+                mesh_wgs84[field_name],
                 errors="coerce"
             )
 
             valid_values = (
-                mesh_wgs84[field]
+                mesh_wgs84[field_name]
                 .dropna()
+
             )
 
             if valid_values.empty:
                 continue
 
             vmin = valid_values.min()
-            vmax = valid_values.max()
+            vmax = heapq.nlargest(2, valid_values)[1]
+
+            amax = valid_values.max()
 
             if vmin == vmax:
                 vmax = vmin + 1
@@ -218,26 +274,26 @@ def generate_html_map(
                     .replace("%", "pct")
             )
 
+            
             legend_html = f"""
             <div id="{legend_name}"
                  class="heatmap-legend"
                  style="
                      display:{'block' if field == first_field else 'none'};
                      position: fixed;
-                     bottom: 50px;
-                     left: 50px;
+                     bottom: 10px;
+                     left: 10px;
                      z-index: 9999;
-                     background-color: white;
+                     background-color: rgba(255,255,255,0.5);
                      border: 2px solid grey;
-                     padding: 10px;
+                     padding: 5px;
                      font-size: 14px;
-                     min-width: 200px;
+                     min-width: 50px;
                  ">
                 <b>{label}</b><br>
-                Min: {vmin:,.2f}<br>
-                Max: {vmax:,.2f}
             </div>
             """
+            
 
             colormap = (
                 branca.colormap.linear.YlOrRd_09
@@ -253,9 +309,13 @@ def generate_html_map(
                 name=label,
                 overlay=True,
                 control=True,
-                show=(field == first_field)
+                show=False
             )
 
+            if field == first_field:
+                first_layer = layer
+
+        
             def style_function(
                     feature,
                     field=field,
@@ -304,6 +364,8 @@ def generate_html_map(
 
             if popup_fields:
 
+                
+
                 folium.GeoJsonPopup(
                     fields=["_popup_html"],
                     aliases=[""],
@@ -314,8 +376,8 @@ def generate_html_map(
                     geojson
                 )
 
+            '''
             if tooltip_fields:
-
                 for feature in geojson.data["features"]:
 
                     properties = feature["properties"]
@@ -355,15 +417,16 @@ def generate_html_map(
                                 )
 
                 #iterate tooltip_columns and tooltip_aliases to populate this
+                '''
 
             geojson.add_to(
                 layer
             )
-
+            
             m.get_root().html.add_child(
                     folium.Element(legend_html)
                     )
-
+            
             layer.add_to(
                 m
             )
@@ -454,6 +517,19 @@ def generate_html_map(
         )
     )
 
+    if first_layer is not None:
+
+        first_layer_name = first_layer.get_name()
+
+        m.get_root().script.add_child(
+            Element(
+                f"""
+        setTimeout(function() {{
+            {map_name}.addLayer({first_layer_name});
+        }}, 500);
+        """
+            )
+        )
 
     # ------------------------------------------------------------------
     # Save map
